@@ -1,0 +1,420 @@
+/* ==========================================================================
+   Step 4 Reveal — Cost comparison, pricing slider, and actions
+   Uses design tokens from global.css exclusively.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Reveal container
+   -------------------------------------------------------------------------- */
+
+.step4 {
+  background-color: var(--reveal-bg);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg) 0;
+}
+
+/* --------------------------------------------------------------------------
+   Cost comparison boxes — side by side on tablet+, stacked on mobile
+   -------------------------------------------------------------------------- */
+
+.step4-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+@media (min-width: 768px) {
+  .step4-comparison {
+    flex-direction: row;
+    gap: var(--space-md);
+  }
+}
+
+.step4-box {
+  flex: 1;
+  background-color: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.step4-box--visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--duration-short) var(--ease-enter),
+    transform var(--duration-short) var(--ease-enter);
+}
+
+.step4-box__label {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
+}
+
+.step4-box__amount {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   Skeleton shimmer — shown during initial reveal delay
+   -------------------------------------------------------------------------- */
+
+.step4-skeleton {
+  flex: 1;
+  background-color: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  overflow: hidden;
+  position: relative;
+}
+
+.step4-skeleton__line {
+  height: 14px;
+  background-color: var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.step4-skeleton__line--short {
+  width: 60%;
+  margin-inline: auto;
+}
+
+.step4-skeleton__line--wide {
+  width: 80%;
+  height: 28px;
+  margin-inline: auto;
+}
+
+.step4-skeleton::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: step4-shimmer 1s ease-in-out infinite;
+}
+
+@keyframes step4-shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Gap bar — slides in to highlight the cost difference
+   -------------------------------------------------------------------------- */
+
+.step4-gap {
+  margin-bottom: var(--space-lg);
+  overflow: hidden;
+}
+
+.step4-gap__bar {
+  background-color: var(--caution);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  text-align: center;
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.step4-gap__bar--visible {
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform var(--duration-short) var(--ease-enter),
+    opacity var(--duration-short) var(--ease-enter);
+}
+
+.step4-gap__text {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: #fff;
+}
+
+.step4-gap__amount {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   Recommended price section — scale-up reveal
+   -------------------------------------------------------------------------- */
+
+.step4-recommended {
+  text-align: center;
+  margin-bottom: var(--space-xl);
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.step4-recommended--visible {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity var(--duration-medium) var(--ease-enter),
+    transform var(--duration-medium) var(--ease-enter);
+}
+
+.step4-recommended__heading {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.step4-recommended__price {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  color: var(--confidence);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: var(--space-xs);
+}
+
+.step4-recommended__subtitle {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-xs);
+}
+
+.step4-recommended__batch {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  color: var(--confidence);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: var(--space-xs);
+}
+
+.step4-recommended__margin {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Slider section — target cost ratio
+   -------------------------------------------------------------------------- */
+
+.step4-slider {
+  margin-bottom: var(--space-xl);
+  padding: 0 var(--space-sm);
+}
+
+.step4-slider__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--space-sm);
+}
+
+.step4-slider__label {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.step4-slider__value {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.step4-slider__input {
+  width: 100%;
+  height: 6px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  cursor: pointer;
+}
+
+.step4-slider__input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.step4-slider__input::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.step4-slider__input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.step4-slider__range {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-xs);
+}
+
+.step4-slider__range-label {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Action buttons
+   -------------------------------------------------------------------------- */
+
+.step4-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .step4-actions {
+    flex-direction: row;
+    justify-content: center;
+  }
+}
+
+.step4-btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-base);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--duration-micro) var(--ease-enter),
+    opacity var(--duration-micro) var(--ease-enter);
+  min-width: 180px;
+  text-align: center;
+}
+
+.step4-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.step4-btn--copy {
+  background-color: var(--accent);
+  color: #fff;
+  border: none;
+}
+
+.step4-btn--copy:hover {
+  opacity: 0.9;
+}
+
+.step4-btn--ghost {
+  background-color: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.step4-btn--ghost:hover {
+  background-color: var(--surface);
+}
+
+/* --------------------------------------------------------------------------
+   Toast notification
+   -------------------------------------------------------------------------- */
+
+.step4-toast {
+  position: fixed;
+  bottom: var(--space-xl);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--text-primary);
+  color: var(--bg);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-short) var(--ease-enter);
+}
+
+.step4-toast--visible {
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion — skip all step4 animations, show final state
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .step4-box {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .step4-gap__bar {
+    transform: none;
+    opacity: 1;
+    transition: none;
+  }
+
+  .step4-recommended {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .step4-skeleton::after {
+    animation: none;
+  }
+
+  .step4-toast {
+    transition: none;
+  }
+
+  .step4-box--visible,
+  .step4-gap__bar--visible,
+  .step4-recommended--visible {
+    transition: none;
+  }
+}
