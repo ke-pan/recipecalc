@@ -1,10 +1,11 @@
 import type { WizardState, WizardAction } from './types';
-import { STEP_COUNT } from './types';
+import { STEP_COUNT, DEFAULT_RECIPE } from './types';
 
 export const initialWizardState: WizardState = {
   currentStep: 0,
   direction: 'forward',
   stepsCompleted: Array(STEP_COUNT).fill(false),
+  recipe: { ...DEFAULT_RECIPE, laborAndOverhead: { ...DEFAULT_RECIPE.laborAndOverhead } },
 };
 
 export function wizardReducer(
@@ -34,9 +35,7 @@ export function wizardReducer(
       const { step } = action;
       if (step < 0 || step >= STEP_COUNT) return state;
       if (step === state.currentStep) return state;
-      // Can only jump to completed steps or the next available step
       if (step > state.currentStep) {
-        // Can only go forward if all intermediate steps are completed
         for (let i = state.currentStep; i < step; i++) {
           if (!state.stepsCompleted[i]) return state;
         }
@@ -58,6 +57,49 @@ export function wizardReducer(
       const completed = [...state.stepsCompleted];
       completed[action.step] = false;
       return { ...state, stepsCompleted: completed };
+    }
+
+    case 'UPDATE_RECIPE_INFO': {
+      return {
+        ...state,
+        recipe: { ...state.recipe, ...action.data },
+      };
+    }
+
+    case 'UPDATE_INGREDIENTS': {
+      return {
+        ...state,
+        recipe: { ...state.recipe, ingredients: action.ingredients },
+      };
+    }
+
+    case 'UPDATE_LABOR': {
+      return {
+        ...state,
+        recipe: {
+          ...state.recipe,
+          laborAndOverhead: { ...state.recipe.laborAndOverhead, ...action.data },
+        },
+      };
+    }
+
+    case 'RESTORE_STATE': {
+      // Mark all steps before the restored step as completed so navigation works
+      const restored = Array(STEP_COUNT).fill(false);
+      for (let i = 0; i < action.step; i++) {
+        restored[i] = true;
+      }
+      return {
+        ...state,
+        currentStep: action.step,
+        recipe: action.recipe,
+        stepsCompleted: restored,
+        direction: 'forward',
+      };
+    }
+
+    case 'RESET': {
+      return { ...initialWizardState, recipe: { ...DEFAULT_RECIPE, laborAndOverhead: { ...DEFAULT_RECIPE.laborAndOverhead } } };
     }
 
     default:
