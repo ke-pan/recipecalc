@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recipe Cost Calculator — Wireframe Sketch</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #fafafa; color: #333; padding: 20px; }
+
+  .sketch-label {
+    font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .page {
+    max-width: 420px; margin: 0 auto;
+  }
+
+  /* Step indicator */
+  .steps {
+    display: flex; gap: 8px; margin-bottom: 32px; padding: 0 20px;
+  }
+  .step-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 1.5px solid #ccc; background: white;
+  }
+  .step-dot.active { background: #333; border-color: #333; }
+  .step-dot.done { background: #bbb; border-color: #bbb; }
+  .step-line { flex: 1; height: 1.5px; background: #ddd; align-self: center; }
+
+  /* Cards */
+  .card {
+    background: white; border: 1px solid #e0e0e0; border-radius: 12px;
+    padding: 24px; margin-bottom: 24px;
+  }
+
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
+
+  /* Form elements — intentionally rough */
+  .field { margin-bottom: 16px; }
+  .field label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; }
+  .field input, .field select {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px;
+    font-size: 14px; background: #fafafa;
+  }
+  .field-row { display: flex; gap: 8px; }
+  .field-row .field { flex: 1; }
+
+  /* Ingredient list */
+  .ingredient-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+  }
+  .ingredient-item .name { font-weight: 500; }
+  .ingredient-item .cost { color: #666; }
+
+  /* The Reveal — the key moment */
+  .reveal-section { margin-top: 24px; }
+  .reveal-compare {
+    display: flex; gap: 12px; margin: 16px 0;
+  }
+  .reveal-box {
+    flex: 1; padding: 16px; border-radius: 10px; text-align: center;
+  }
+  .reveal-box.ingredients-only {
+    background: #fff3e0; border: 1.5px solid #ffcc80;
+  }
+  .reveal-box.true-cost {
+    background: #e8f5e9; border: 1.5px solid #81c784;
+  }
+  .reveal-box .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+  .reveal-box .amount { font-size: 28px; font-weight: 700; margin: 8px 0 4px; }
+  .reveal-box.ingredients-only .amount { color: #e65100; }
+  .reveal-box.true-cost .amount { color: #2e7d32; }
+  .reveal-box .per-unit { font-size: 11px; color: #999; }
+
+  .gap-bar {
+    background: #f5f5f5; border-radius: 8px; padding: 12px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 12px 0;
+  }
+  .gap-bar .gap-label { font-size: 12px; color: #666; }
+  .gap-bar .gap-amount { font-size: 16px; font-weight: 700; color: #c62828; }
+
+  /* Nudge text — the emotional design */
+  .nudge {
+    background: #f0f4ff; border-left: 3px solid #5c6bc0;
+    padding: 12px 16px; border-radius: 0 8px 8px 0;
+    font-size: 12px; color: #37474f; line-height: 1.5;
+    margin: 16px 0;
+  }
+
+  /* Price recommendation */
+  .price-rec {
+    text-align: center; padding: 20px;
+  }
+  .price-rec .rec-label { font-size: 12px; color: #888; margin-bottom: 8px; }
+  .price-rec .rec-price { font-size: 36px; font-weight: 800; color: #1b5e20; }
+  .price-rec .rec-sub { font-size: 12px; color: #666; margin-top: 8px; }
+
+  /* Buttons */
+  .btn {
+    display: block; width: 100%; padding: 14px; border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 600; cursor: pointer; text-align: center;
+    margin-top: 12px;
+  }
+  .btn-primary { background: #333; color: white; }
+  .btn-secondary { background: white; color: #333; border: 1.5px solid #ddd; }
+  .btn-ghost { background: transparent; color: #888; font-weight: 400; font-size: 12px; }
+
+  /* Section divider */
+  .section-divider {
+    text-align: center; padding: 32px 0 16px;
+    font-size: 11px; color: #bbb; text-transform: uppercase; letter-spacing: 2px;
+  }
+
+  /* Hand-drawn annotation style */
+  .annotation {
+    font-size: 10px; color: #c62828; font-style: italic;
+    padding: 4px 8px; margin: 8px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- SCREEN 1: Welcome / What did you make? -->
+  <div class="section-divider">Screen 1 — Start</div>
+
+  <div class="card">
+    <h1>Know Your True Cost</h1>
+    <p class="subtitle">Most bakers only count ingredients. Let's see the full picture.</p>
+
+    <div class="field">
+      <label>What did you make?</label>
+      <input type="text" value="Chocolate Chip Cookies" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>How many?</label>
+        <input type="text" value="24 cookies" />
+      </div>
+      <div class="field">
+        <label>Batch time</label>
+        <input type="text" value="2.5 hours" />
+      </div>
+    </div>
+
+    <button class="btn btn-primary">Let's start →</button>
+  </div>
+
+  <!-- annotation: design note -->
+  <div class="annotation">↑ Conversational tone. Not "Recipe Name" / "Yield" — friendly language.</div>
+
+  <!-- SCREEN 2: Ingredients (step by step) -->
+  <div class="section-divider">Screen 2 — Ingredients</div>
+
+  <div class="steps">
+    <div class="step-dot done"></div>
+    <div class="step-line"></div>
+    <div class="step-dot active"></div>
+    <div class="step-line"></div>
+    <div class="step-dot"></div>
+    <div class="step-line"></div>
+    <div class="step-dot"></div>
+  </div>
+
+  <div class="card">
+    <h2>Add your ingredients</h2>
+    <p class="subtitle">Include everything — even the small stuff.</p>
+
+    <div class="ingredient-item">
+      <div>
+        <div class="name">All-purpose flour</div>
+        <div style="font-size:11px;color:#999">5 lb bag → used 2.5 cups</div>
+      </div>
+      <div class="cost">$0.42</div>
+    </div>
+    <div class="ingredient-item">
+      <div>
+        <div class="name">Butter (unsalted)</div>
+        <div style="font-size:11px;color:#999">1 lb block → used 1 cup</div>
+      </div>
+      <div class="cost">$2.75</div>
+    </div>
+    <div class="ingredient-item">
+      <div>
+        <div class="name">Chocolate chips</div>
+        <div style="font-size:11px;color:#999">12 oz bag → used 12 oz</div>
+      </div>
+      <div class="cost">$3.49</div>
+    </div>
+    <div class="ingredient-item">
+      <div>
+        <div class="name">Eggs</div>
+        <div style="font-size:11px;color:#999">12 ct → used 2</div>
+      </div>
+      <div class="cost">$0.58</div>
+    </div>
+    <div class="ingredient-item" style="border-bottom:none;color:#999">
+      <div>+ 4 more ingredients</div>
+      <div class="cost">$1.26</div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:2px solid #333;margin-top:8px;font-weight:600">
+      <div>Ingredient subtotal</div>
+      <div>$8.50</div>
+    </div>
+
+    <button class="btn btn-primary">Next: The costs most people miss →</button>
+  </div>
+
+  <div class="annotation">↑ "The costs most people miss" — educational framing, not accusatory</div>
+
+  <!-- SCREEN 3: Hidden Costs -->
+  <div class="section-divider">Screen 3 — Hidden Costs</div>
+
+  <div class="steps">
+    <div class="step-dot done"></div>
+    <div class="step-line"></div>
+    <div class="step-dot done"></div>
+    <div class="step-line"></div>
+    <div class="step-dot active"></div>
+    <div class="step-line"></div>
+    <div class="step-dot"></div>
+  </div>
+
+  <div class="card">
+    <h2>The costs most bakers forget</h2>
+
+    <div class="nudge">
+      💡 <strong>Did you know?</strong> The average home baker underprices by 40-60%
+      because they only count ingredients. These "hidden" costs are real money
+      out of your pocket.
+    </div>
+
+    <div class="field">
+      <label>Your time (2.5 hrs × hourly rate)</label>
+      <div class="field-row">
+        <div class="field">
+          <input type="text" value="$15/hr" />
+        </div>
+        <div style="align-self:center;color:#666;font-size:13px;white-space:nowrap">= $37.50</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Packaging (bags, boxes, labels, ribbon)</label>
+      <input type="text" value="$4.00" />
+    </div>
+
+    <div class="field">
+      <label>Overhead (electricity, gas, cottage food license)</label>
+      <input type="text" value="$2.50" />
+    </div>
+
+    <div class="field">
+      <label>Platform fees (Etsy, Square, delivery apps)</label>
+      <input type="text" value="$0.00" />
+    </div>
+
+    <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:2px solid #333;margin-top:8px;font-weight:600">
+      <div>Hidden cost subtotal</div>
+      <div>$44.00</div>
+    </div>
+
+    <button class="btn btn-primary">See your true cost →</button>
+  </div>
+
+  <div class="annotation">↑ This is the key educational step. "Hidden costs" are framed as normal, not as mistakes.</div>
+
+  <!-- SCREEN 4: THE REVEAL -->
+  <div class="section-divider">Screen 4 — ✨ The Reveal ✨</div>
+
+  <div class="steps">
+    <div class="step-dot done"></div>
+    <div class="step-line"></div>
+    <div class="step-dot done"></div>
+    <div class="step-line"></div>
+    <div class="step-dot done"></div>
+    <div class="step-line"></div>
+    <div class="step-dot active"></div>
+  </div>
+
+  <div class="card">
+    <h2>Your Chocolate Chip Cookies</h2>
+    <p class="subtitle">Here's what 24 cookies really cost you.</p>
+
+    <div class="reveal-compare">
+      <div class="reveal-box ingredients-only">
+        <div class="label">Ingredients Only</div>
+        <div class="amount">$8.50</div>
+        <div class="per-unit">$0.35/cookie</div>
+      </div>
+      <div class="reveal-box true-cost">
+        <div class="label">True Cost</div>
+        <div class="amount">$52.50</div>
+        <div class="per-unit">$2.19/cookie</div>
+      </div>
+    </div>
+
+    <div class="gap-bar">
+      <div class="gap-label">Hidden gap you'd be losing</div>
+      <div class="gap-amount">$44.00</div>
+    </div>
+
+    <div class="nudge">
+      💪 <strong>You're not alone.</strong> 80% of home bakers discover a gap like this.
+      The good news? Now you know — and you can price with confidence.
+    </div>
+
+    <!-- Price recommendation -->
+    <div class="price-rec" style="margin-top:20px">
+      <div class="rec-label">To hit a healthy 30% food cost, charge at least</div>
+      <div class="rec-price">$7.29</div>
+      <div class="rec-sub">per cookie &nbsp;·&nbsp; $175 per batch of 24</div>
+    </div>
+
+    <button class="btn btn-primary">Save & Export this recipe</button>
+    <button class="btn btn-secondary">Adjust numbers</button>
+    <button class="btn btn-ghost">Start a new recipe</button>
+  </div>
+
+  <div class="annotation">↑ THE PRODUCT MOMENT. The side-by-side reveal is the "aha." Supportive tone, not judgmental.</div>
+
+  <!-- PAYWALL HINT -->
+  <div class="card" style="border:1.5px dashed #ccc;background:#fafafa;text-align:center;padding:32px 24px">
+    <div style="font-size:24px;margin-bottom:12px">📋</div>
+    <h2 style="font-size:14px">Save unlimited recipes & export PDF</h2>
+    <p style="font-size:12px;color:#888;margin:8px 0 16px">One-time purchase. No subscription. Yours forever.</p>
+    <button class="btn btn-primary" style="max-width:200px;margin:0 auto;background:#1b5e20">Unlock for $19</button>
+    <p style="font-size:11px;color:#bbb;margin-top:12px">Free: calculate unlimited recipes. Paid: save, export, share.</p>
+  </div>
+
+  <div class="annotation">↑ Paywall is AFTER the value moment. User already got the insight for free. Payment is for convenience (save/export), not for the core value.</div>
+
+</div>
+
+</body>
+</html>

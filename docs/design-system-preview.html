@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RecipeCalc Design System Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F6F0E7;
+    --surface: #FFF9F2;
+    --text-primary: #2F241D;
+    --text-muted: #736357;
+    --accent: #B85C38;
+    --caution: #C96A2B;
+    --confidence: #4E7A5D;
+    --border: #E8DFD3;
+    --border-subtle: #F0E8DC;
+    --reveal-bg: #F2EDE4;
+  }
+
+  [data-theme="dark"] {
+    --bg: #1C1917;
+    --surface: #292524;
+    --text-primary: #F5F0EB;
+    --text-muted: #A8A29E;
+    --accent: #D4845A;
+    --caution: #E0884A;
+    --confidence: #6B9E7D;
+    --border: #3D3733;
+    --border-subtle: #332E2A;
+    --reveal-bg: #252220;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    line-height: 1.6;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ─── Layout ─── */
+  .container { max-width: 720px; margin: 0 auto; padding: 48px 24px; }
+  .section { margin-bottom: 64px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* ─── Typography ─── */
+  h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 36px; line-height: 1.2; letter-spacing: -0.02em; margin-bottom: 8px; }
+  h2 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 24px; line-height: 1.3; margin-bottom: 16px; color: var(--text-primary); }
+  h3 { font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 12px; }
+  p { font-size: 16px; color: var(--text-muted); margin-bottom: 12px; }
+  .data { font-family: 'Geist Mono', monospace; font-variant-numeric: tabular-nums; }
+
+  /* ─── Theme Toggle ─── */
+  .theme-toggle {
+    position: fixed; top: 16px; right: 16px; z-index: 100;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    color: var(--text-muted); transition: all 0.2s;
+  }
+  .theme-toggle:hover { color: var(--text-primary); border-color: var(--accent); }
+
+  /* ─── Header ─── */
+  .header {
+    text-align: left; margin-bottom: 48px; padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); font-weight: 600; margin-bottom: 8px; }
+
+  /* ─── Color Swatches ─── */
+  .swatch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .swatch {
+    border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .swatch-color { height: 64px; }
+  .swatch-info { padding: 10px 12px; background: var(--surface); }
+  .swatch-name { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+  .swatch-hex { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--text-muted); }
+
+  /* ─── Font Specimens ─── */
+  .specimen { padding: 24px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border-subtle); margin-bottom: 16px; }
+  .specimen-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 12px; }
+  .specimen-display { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 600; line-height: 1.2; margin-bottom: 4px; }
+  .specimen-body { font-family: 'DM Sans', sans-serif; font-size: 16px; line-height: 1.6; color: var(--text-muted); }
+  .specimen-data { font-family: 'Geist Mono', monospace; font-size: 14px; font-variant-numeric: tabular-nums; }
+
+  /* ─── UI Components ─── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 12px 24px; border-radius: 8px; font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer; border: none;
+    transition: all 0.15s ease;
+  }
+  .btn-primary { background: var(--accent); color: #FFF9F2; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-secondary { background: transparent; color: var(--text-primary); border: 1.5px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-confidence { background: var(--confidence); color: #FFF9F2; }
+
+  .input-demo {
+    width: 100%; padding: 12px 16px; border-radius: 8px;
+    border: 1.5px solid var(--border); background: var(--surface);
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    color: var(--text-primary); transition: border-color 0.15s;
+  }
+  .input-demo:focus { outline: none; border-color: var(--accent); }
+  .input-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; display: block; }
+
+  .alert {
+    padding: 12px 16px; border-radius: 8px; font-size: 13px; line-height: 1.5;
+    margin-bottom: 8px;
+  }
+  .alert-caution { background: color-mix(in srgb, var(--caution) 12%, var(--surface)); color: var(--caution); border-left: 3px solid var(--caution); }
+  .alert-confidence { background: color-mix(in srgb, var(--confidence) 12%, var(--surface)); color: var(--confidence); border-left: 3px solid var(--confidence); }
+
+  /* ─── Product Mockup: Wizard Step ─── */
+  .mockup { background: var(--bg); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; }
+  .mockup-header {
+    padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .mockup-logo { font-family: 'Fraunces', serif; font-weight: 700; font-size: 16px; color: var(--accent); }
+  .mockup-steps { display: flex; gap: 6px; align-items: center; }
+  .mockup-dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--surface); }
+  .mockup-dot.done { background: var(--text-muted); border-color: var(--text-muted); }
+  .mockup-dot.active { background: var(--accent); border-color: var(--accent); }
+  .mockup-line { width: 16px; height: 1.5px; background: var(--border); }
+  .mockup-body { padding: 24px 20px; }
+  .mockup-body h2 { font-family: 'Fraunces', serif; font-size: 20px; margin-bottom: 4px; }
+  .mockup-body .sub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+
+  /* ─── Product Mockup: Reveal ─── */
+  .reveal-mockup { background: var(--reveal-bg); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; }
+  .reveal-mockup .mockup-header { background: var(--reveal-bg); }
+  .reveal-body { padding: 24px 20px; text-align: center; }
+  .reveal-body h2 { font-family: 'Fraunces', serif; font-size: 20px; margin-bottom: 4px; text-align: left; }
+  .reveal-body .sub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; text-align: left; }
+  .reveal-boxes { display: flex; gap: 12px; margin: 20px 0; }
+  .reveal-box {
+    flex: 1; padding: 16px 12px; border-radius: 10px; text-align: center;
+  }
+  .reveal-box.ingredients {
+    background: color-mix(in srgb, var(--caution) 10%, var(--surface));
+    border: 1.5px solid color-mix(in srgb, var(--caution) 30%, var(--border));
+  }
+  .reveal-box.true-cost {
+    background: color-mix(in srgb, var(--confidence) 10%, var(--surface));
+    border: 1.5px solid color-mix(in srgb, var(--confidence) 30%, var(--border));
+  }
+  .reveal-box .rb-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+  .reveal-box .rb-amount { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 700; margin: 6px 0 2px; }
+  .reveal-box.ingredients .rb-amount { color: var(--caution); }
+  .reveal-box.true-cost .rb-amount { color: var(--confidence); }
+  .reveal-box .rb-per { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--text-muted); }
+  .gap-bar {
+    background: var(--surface); border-radius: 8px; padding: 10px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 12px 0;
+  }
+  .gap-bar .gl { font-size: 12px; color: var(--text-muted); }
+  .gap-bar .ga { font-family: 'Geist Mono', monospace; font-size: 15px; font-weight: 700; color: var(--caution); }
+  .price-rec { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-subtle); }
+  .price-rec .pr-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+  .price-rec .pr-price { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 800; color: var(--confidence); }
+  .price-rec .pr-sub { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* ─── Ingredient Row ─── */
+  .ing-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--border-subtle);
+  }
+  .ing-name { font-size: 14px; font-weight: 500; }
+  .ing-detail { font-size: 11px; color: var(--text-muted); }
+  .ing-cost { font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--text-muted); }
+
+  /* ─── Divider ─── */
+  .divider { height: 1px; background: var(--border); margin: 48px 0; }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()">Light / Dark</button>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="label">Design System Preview</div>
+    <h1>RecipeCalc</h1>
+    <p>Pricing therapist for home bakers. Warm, trustworthy, empowering.</p>
+  </div>
+
+  <!-- Color Palette -->
+  <div class="section">
+    <h3>Color Palette</h3>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch-color" style="background:#F6F0E7"></div><div class="swatch-info"><div class="swatch-name">Background</div><div class="swatch-hex">#F6F0E7</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#FFF9F2"></div><div class="swatch-info"><div class="swatch-name">Surface</div><div class="swatch-hex">#FFF9F2</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#2F241D"></div><div class="swatch-info"><div class="swatch-name">Text Primary</div><div class="swatch-hex">#2F241D</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#736357"></div><div class="swatch-info"><div class="swatch-name">Text Muted</div><div class="swatch-hex">#736357</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#B85C38"></div><div class="swatch-info"><div class="swatch-name">Accent (Terracotta)</div><div class="swatch-hex">#B85C38</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#C96A2B"></div><div class="swatch-info"><div class="swatch-name">Caution (Cinnamon)</div><div class="swatch-hex">#C96A2B</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#4E7A5D"></div><div class="swatch-info"><div class="swatch-name">Confidence (Herb)</div><div class="swatch-hex">#4E7A5D</div></div></div>
+    </div>
+  </div>
+
+  <!-- Typography -->
+  <div class="section">
+    <h3>Typography</h3>
+    <div class="specimen">
+      <div class="specimen-label">Display — Fraunces 600</div>
+      <div class="specimen-display">Are your cookies really making money?</div>
+    </div>
+    <div class="specimen">
+      <div class="specimen-label">Body — DM Sans 400</div>
+      <div class="specimen-body">Most home bakers only count ingredients when pricing their products. But your time, packaging, electricity, and platform fees are real costs that eat into your profit. Let's see the full picture.</div>
+    </div>
+    <div class="specimen">
+      <div class="specimen-label">Data — Geist Mono 500</div>
+      <div class="specimen-data">
+        Ingredients: $8.50 &nbsp;|&nbsp; True cost: $52.50 &nbsp;|&nbsp; Gap: $44.00<br>
+        Per cookie: $0.35 → $2.19 &nbsp;|&nbsp; Suggested: $7.29
+      </div>
+    </div>
+  </div>
+
+  <!-- UI Components -->
+  <div class="section">
+    <h3>Components</h3>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+      <button class="btn btn-primary">Calculate true cost</button>
+      <button class="btn btn-secondary">Adjust numbers</button>
+      <button class="btn btn-confidence">Save & Export — $19</button>
+    </div>
+    <div class="grid-2" style="margin-bottom:20px">
+      <div>
+        <label class="input-label">What did you make?</label>
+        <input class="input-demo" type="text" value="Chocolate Chip Cookies" />
+      </div>
+      <div>
+        <label class="input-label">How many?</label>
+        <input class="input-demo" type="text" value="24 cookies" />
+      </div>
+    </div>
+    <div class="alert alert-caution">Industry average: labor + overhead = 40-60% of total cost.</div>
+    <div class="alert alert-confidence">You're not alone. 80% of home bakers discover a gap like this.</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Product Mockup: Step 2 (Ingredients) -->
+  <div class="section">
+    <h3>Product Mockup — Step 2: Ingredients</h3>
+    <div class="mockup">
+      <div class="mockup-header">
+        <div class="mockup-logo">RecipeCalc</div>
+        <div class="mockup-steps">
+          <div class="mockup-dot done"></div>
+          <div class="mockup-line"></div>
+          <div class="mockup-dot active"></div>
+          <div class="mockup-line"></div>
+          <div class="mockup-dot"></div>
+          <div class="mockup-line"></div>
+          <div class="mockup-dot"></div>
+        </div>
+      </div>
+      <div class="mockup-body">
+        <h2>Ingredients</h2>
+        <p class="sub">Add each ingredient with its purchase price and amount used.</p>
+
+        <div class="ing-row">
+          <div><div class="ing-name">All-purpose flour</div><div class="ing-detail">5 lb bag → 2.5 cups</div></div>
+          <div class="ing-cost">$0.42</div>
+        </div>
+        <div class="ing-row">
+          <div><div class="ing-name">Butter (unsalted)</div><div class="ing-detail">1 lb block → 1 cup</div></div>
+          <div class="ing-cost">$2.75</div>
+        </div>
+        <div class="ing-row">
+          <div><div class="ing-name">Chocolate chips</div><div class="ing-detail">12 oz bag → 12 oz</div></div>
+          <div class="ing-cost">$3.49</div>
+        </div>
+        <div class="ing-row">
+          <div><div class="ing-name">Eggs</div><div class="ing-detail">12 ct → 2</div></div>
+          <div class="ing-cost">$0.58</div>
+        </div>
+        <div class="ing-row" style="border:none;color:var(--text-muted)">
+          <div>+ 4 more ingredients</div>
+          <div class="ing-cost">$1.26</div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:2px solid var(--text-primary);margin-top:8px;font-weight:600">
+          <div>Ingredient subtotal</div>
+          <div class="data">$8.50</div>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%;margin-top:16px">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Mockup: Step 4a (The Reveal) -->
+  <div class="section">
+    <h3>Product Mockup — Step 4a: The Reveal</h3>
+    <div class="reveal-mockup">
+      <div class="mockup-header">
+        <div class="mockup-logo">RecipeCalc</div>
+        <div class="mockup-steps">
+          <div class="mockup-dot done"></div>
+          <div class="mockup-line"></div>
+          <div class="mockup-dot done"></div>
+          <div class="mockup-line"></div>
+          <div class="mockup-dot done"></div>
+          <div class="mockup-line"></div>
+          <div class="mockup-dot active"></div>
+        </div>
+      </div>
+      <div class="reveal-body">
+        <h2 style="text-align:left">Your Chocolate Chip Cookies</h2>
+        <p class="sub" style="text-align:left">Here's what 24 cookies really cost you.</p>
+
+        <div class="reveal-boxes">
+          <div class="reveal-box ingredients">
+            <div class="rb-label">Ingredients Only</div>
+            <div class="rb-amount">$8.50</div>
+            <div class="rb-per">$0.35/cookie</div>
+          </div>
+          <div class="reveal-box true-cost">
+            <div class="rb-label">True Cost</div>
+            <div class="rb-amount">$52.50</div>
+            <div class="rb-per">$2.19/cookie</div>
+          </div>
+        </div>
+
+        <div class="gap-bar">
+          <div class="gl">Hidden gap you'd be losing</div>
+          <div class="ga">$44.00</div>
+        </div>
+
+        <div class="alert alert-confidence" style="text-align:left">You're not alone. 80% of home bakers discover a gap like this. Now you know — and you can price with confidence.</div>
+
+        <div class="price-rec">
+          <div class="pr-label">To hit a healthy 30% food cost, charge at least</div>
+          <div class="pr-price">$7.29</div>
+          <div class="pr-sub">per cookie &nbsp;·&nbsp; $175 per batch of 24</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+}
+</script>
+</body>
+</html>
