@@ -1,0 +1,153 @@
+/* ==========================================================================
+   Step 3 — Labor & Overhead
+   Uses design tokens from global.css exclusively.
+   ========================================================================== */
+
+.step3 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* --------------------------------------------------------------------------
+   Header
+   -------------------------------------------------------------------------- */
+
+.step3__title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2xs);
+}
+
+.step3__subtitle {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   Field group
+   -------------------------------------------------------------------------- */
+
+.step3__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.step3__label {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.step3__label-hint {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.step3__input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.step3__currency {
+  position: absolute;
+  left: var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.step3__input {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-lg);
+  transition: border-color var(--duration-micro) var(--ease-enter);
+}
+
+.step3__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.step3__input--error {
+  border-color: var(--caution);
+}
+
+.step3__input--plain {
+  padding-left: var(--space-sm);
+}
+
+.step3__suffix {
+  position: absolute;
+  right: var(--space-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.step3__error {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--caution);
+  min-height: calc(var(--text-sm) * 1.4);
+}
+
+/* --------------------------------------------------------------------------
+   Labor cost preview
+   -------------------------------------------------------------------------- */
+
+.step3__labor-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.step3__labor-preview-label {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.step3__labor-preview-value {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  margin-left: auto;
+}
+
+/* --------------------------------------------------------------------------
+   Static tip
+   -------------------------------------------------------------------------- */
+
+.step3__tip {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  background-color: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  line-height: 1.5;
+}
