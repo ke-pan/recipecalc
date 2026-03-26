@@ -1,32 +1,25 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import TestIsland from '../components/TestIsland';
+import HeroCarousel from '../components/hero/HeroCarousel';
+import '../components/hero/hero.css';
+
+const title = 'RecipeCalc — Recipe Cost Calculator for Home Bakers';
+const description =
+  'Know your true recipe cost and price with confidence. Free recipe cost calculator for home bakers, cottage food sellers, and small bakeries.';
 ---
 
-<BaseLayout>
-  <main class="container" style="padding-top: var(--space-2xl); padding-bottom: var(--space-2xl);">
-    <h1>RecipeCalc</h1>
-    <p style="color: var(--text-muted); margin-top: var(--space-sm);">
-      Know your true recipe cost. Price with confidence.
-    </p>
+<BaseLayout title={title} description={description}>
+  <Fragment slot="head">
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://recipecalc.app/" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+  </Fragment>
 
-    <div style="margin-top: var(--space-lg);">
-      <h2>Design System Check</h2>
-      <div style="margin-top: var(--space-md); display: flex; flex-direction: column; gap: var(--space-sm);">
-        <p>Body text in <strong>DM Sans</strong>.</p>
-        <h3>Heading in Fraunces</h3>
-        <p class="mono">Monospace data: $12.50 / dozen</p>
-        <p class="label">Section Label</p>
-      </div>
-
-      <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-sm); flex-wrap: wrap;">
-        <div style="width: 48px; height: 48px; background: var(--accent); border-radius: var(--radius-md);" title="accent"></div>
-        <div style="width: 48px; height: 48px; background: var(--caution); border-radius: var(--radius-md);" title="caution"></div>
-        <div style="width: 48px; height: 48px; background: var(--confidence); border-radius: var(--radius-md);" title="confidence"></div>
-        <div style="width: 48px; height: 48px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);" title="surface"></div>
-      </div>
-    </div>
-
-    <TestIsland client:load />
+  <main class="container">
+    <HeroCarousel client:load />
   </main>
 </BaseLayout>
