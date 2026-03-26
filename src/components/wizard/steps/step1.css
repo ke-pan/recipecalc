@@ -1,0 +1,102 @@
+/* ==========================================================================
+   Step 1: Recipe Info — CSS
+   Uses design tokens from global.css exclusively.
+   ========================================================================== */
+
+.step1 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* --------------------------------------------------------------------------
+   Title — conversational heading
+   -------------------------------------------------------------------------- */
+
+.step1__title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+/* --------------------------------------------------------------------------
+   Form fields
+   -------------------------------------------------------------------------- */
+
+.step1__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.step1__label {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.step1__input {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  line-height: 1.5;
+  transition: border-color var(--duration-micro) var(--ease-enter);
+}
+
+.step1__input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.step1__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.step1__input--error {
+  border-color: var(--caution);
+}
+
+/* --------------------------------------------------------------------------
+   Inline row — quantity + unit side by side
+   -------------------------------------------------------------------------- */
+
+.step1__row {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.step1__row > .step1__field {
+  flex: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Microcopy — helper text below fields
+   -------------------------------------------------------------------------- */
+
+.step1__microcopy {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   Error messages
+   -------------------------------------------------------------------------- */
+
+.step1__error {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--caution);
+  line-height: 1.4;
+}
