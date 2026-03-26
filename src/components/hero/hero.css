@@ -1,0 +1,126 @@
+/* ==========================================================================
+   Hero Carousel Styles
+   Uses design system CSS variables from global.css
+   ========================================================================== */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: var(--space-3xl);
+  padding-bottom: var(--space-3xl);
+  min-height: 80vh;
+  justify-content: center;
+}
+
+/* --------------------------------------------------------------------------
+   Brand name
+   -------------------------------------------------------------------------- */
+
+.hero__brand {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-lg);
+}
+
+/* --------------------------------------------------------------------------
+   Title
+   -------------------------------------------------------------------------- */
+
+.hero__title {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-primary);
+  margin-bottom: var(--space-lg);
+}
+
+@media (min-width: 768px) {
+  .hero__title {
+    font-size: var(--text-display);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Rotating word wrapper
+   -------------------------------------------------------------------------- */
+
+.hero__rotating-wrapper {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  position: relative;
+}
+
+.hero__rotating-word {
+  display: inline-block;
+  color: var(--accent);
+  font-style: italic;
+}
+
+.hero__rotating-word--subtitle {
+  color: var(--text-primary);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Subtitle
+   -------------------------------------------------------------------------- */
+
+.hero__subtitle {
+  font-family: var(--font-body);
+  font-size: var(--text-lg);
+  color: var(--text-muted);
+  margin-bottom: var(--space-2xl);
+}
+
+@media (min-width: 768px) {
+  .hero__subtitle {
+    font-size: var(--text-xl);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   CTA Button
+   -------------------------------------------------------------------------- */
+
+.hero__cta {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: #fff;
+  background-color: var(--accent);
+  padding: var(--space-md) var(--space-xl);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: background-color var(--duration-short) var(--ease-enter);
+}
+
+.hero__cta:hover {
+  background-color: #A04E2E;
+}
+
+.hero__cta:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__rotating-word {
+    transform: none !important;
+    opacity: 1 !important;
+    transition: none !important;
+  }
+}
