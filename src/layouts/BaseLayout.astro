@@ -8,6 +8,10 @@ const {
   title = 'RecipeCalc — Pricing Therapist for Home Bakers',
   description = 'Know your true recipe cost. Price with confidence.',
 } = Astro.props;
+
+const umamiWebsiteId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID;
+const umamiSrc = import.meta.env.PUBLIC_UMAMI_SRC;
+const enableUmami = import.meta.env.PROD && !!umamiWebsiteId && !!umamiSrc;
 ---
 
 <!doctype html>
@@ -28,6 +32,9 @@ const {
 
     <title>{title}</title>
     <slot name="head" />
+    {enableUmami && (
+      <script defer src={umamiSrc} data-website-id={umamiWebsiteId}></script>
+    )}
   </head>
   <body>
     <slot />
