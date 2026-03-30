@@ -1,6 +1,7 @@
 import { useState, useCallback, type FormEvent } from 'react';
 import { LicenseProvider, useLicense } from '../../contexts/LicenseContext.js';
 import type { ActivateResult } from '../../services/lemonsqueezy.js';
+import { trackEvent, EVENTS } from '../../lib/analytics';
 import './activate.css';
 
 // ---------------------------------------------------------------------------
@@ -69,8 +70,10 @@ function ActivateForm() {
       const result: ActivateResult = await activate(trimmed);
 
       if (result.ok) {
+        trackEvent(EVENTS.ACTIVATE_SUCCESS, { channel: 'manual' });
         setState({ phase: 'success' });
       } else {
+        trackEvent(EVENTS.ACTIVATE_FAIL, { reason: result.reason });
         setState({ phase: 'error', reason: result.reason });
       }
     },

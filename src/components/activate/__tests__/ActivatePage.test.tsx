@@ -18,6 +18,20 @@ vi.mock('../../../services/lemonsqueezy.js', () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Mock analytics
+// ---------------------------------------------------------------------------
+
+const mockTrackEvent = vi.fn();
+
+vi.mock('../../../lib/analytics', () => ({
+  trackEvent: (...args: unknown[]) => mockTrackEvent(...args),
+  EVENTS: {
+    ACTIVATE_SUCCESS: 'activate_success',
+    ACTIVATE_FAIL: 'activate_fail',
+  },
+}));
+
+// ---------------------------------------------------------------------------
 // localStorage mock
 // ---------------------------------------------------------------------------
 
@@ -73,6 +87,7 @@ function makeLicenseJSON(overrides: Record<string, unknown> = {}): string {
 beforeEach(() => {
   store = {};
   mockActivate.mockReset();
+  mockTrackEvent.mockClear();
   mockMatchMedia(false);
   Object.defineProperty(globalThis, 'localStorage', {
     value: mockLocalStorage,
@@ -460,6 +475,54 @@ describe('ActivatePage', () => {
 
     await waitFor(() => {
       expect(mockActivate).toHaveBeenCalledWith('enter-key');
+    });
+  });
+
+  // ---- Analytics events ----
+
+  it('fires ACTIVATE_SUCCESS with channel "manual" on successful activation', async () => {
+    mockActivate.mockResolvedValueOnce({
+      ok: true,
+      instanceId: 'id',
+      activatedAt: '2026-01-01T00:00:00Z',
+    });
+
+    const user = userEvent.setup();
+    render(<ActivatePage />);
+
+    await user.type(screen.getByPlaceholderText('Paste your license key'), 'good-key');
+    await user.click(screen.getByText('Activate'));
+
+    await waitFor(() => {
+      expect(mockTrackEvent).toHaveBeenCalledWith('activate_success', { channel: 'manual' });
+    });
+  });
+
+  it('fires ACTIVATE_FAIL with reason on failed activation', async () => {
+    mockActivate.mockResolvedValueOnce({ ok: false, reason: 'invalid' });
+
+    const user = userEvent.setup();
+    render(<ActivatePage />);
+
+    await user.type(screen.getByPlaceholderText('Paste your license key'), 'bad-key');
+    await user.click(screen.getByText('Activate'));
+
+    await waitFor(() => {
+      expect(mockTrackEvent).toHaveBeenCalledWith('activate_fail', { reason: 'invalid' });
+    });
+  });
+
+  it('fires ACTIVATE_FAIL with network reason on network error', async () => {
+    mockActivate.mockResolvedValueOnce({ ok: false, reason: 'network' });
+
+    const user = userEvent.setup();
+    render(<ActivatePage />);
+
+    await user.type(screen.getByPlaceholderText('Paste your license key'), 'net-key');
+    await user.click(screen.getByText('Activate'));
+
+    await waitFor(() => {
+      expect(mockTrackEvent).toHaveBeenCalledWith('activate_fail', { reason: 'network' });
     });
   });
 });

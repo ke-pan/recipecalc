@@ -1,4 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// Mock analytics before importing lemonjs
+const mockTrackEvent = vi.fn();
+vi.mock('../analytics', () => ({
+  trackEvent: (...args: unknown[]) => mockTrackEvent(...args),
+  EVENTS: {
+    PURCHASE_COMPLETE: 'purchase_complete',
+  },
+}));
+
 import {
   setupLemonSqueezy,
   openCheckout,
@@ -31,6 +41,7 @@ beforeEach(() => {
   _reset();
   mockSetup.mockReset();
   mockUrlOpen.mockReset();
+  mockTrackEvent.mockClear();
   installLemonSqueezyGlobal();
 });
 
@@ -120,6 +131,36 @@ describe('eventHandler — Checkout.Success', () => {
 
     expect(onActivate).toHaveBeenCalledTimes(1);
     expect(onActivate).toHaveBeenCalledWith('LICENSE-123-XYZ');
+  });
+
+  it('fires PURCHASE_COMPLETE event on Checkout.Success', () => {
+    const onActivate = vi.fn();
+    setupLemonSqueezy(onActivate);
+
+    const eventHandler = mockSetup.mock.calls[0][0].eventHandler;
+
+    eventHandler({
+      event: 'Checkout.Success',
+      data: {
+        order: { first_order_item: { license_key: 'KEY-123' } },
+      },
+    });
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('purchase_complete', { channel: 'website' });
+  });
+
+  it('does not fire PURCHASE_COMPLETE when license_key is empty', () => {
+    const onActivate = vi.fn();
+    setupLemonSqueezy(onActivate);
+
+    const eventHandler = mockSetup.mock.calls[0][0].eventHandler;
+
+    eventHandler({
+      event: 'Checkout.Success',
+      data: { order: { first_order_item: { license_key: '' } } },
+    });
+
+    expect(mockTrackEvent).not.toHaveBeenCalled();
   });
 
   it('ignores non-Checkout.Success events', () => {

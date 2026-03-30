@@ -7,7 +7,9 @@
  * Design: dashed border inline card (not a modal). See RFC 5.5 and DESIGN.md.
  */
 
+import { useRef, useEffect } from 'react';
 import { useLemonCheckout } from '../../hooks/useLemonCheckout.js';
+import { trackEvent, EVENTS } from '../../lib/analytics';
 import './paywall.css';
 
 export interface PaywallCardProps {
@@ -23,13 +25,28 @@ const FEATURES = [
 
 export default function PaywallCard({ checkoutUrl }: PaywallCardProps) {
   const { openCheckout } = useLemonCheckout();
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        trackEvent(EVENTS.PAYWALL_VIEW);
+        observer.disconnect();
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const handleClick = () => {
+    trackEvent(EVENTS.PAYWALL_CLICK);
     openCheckout(checkoutUrl);
   };
 
   return (
-    <div className="paywall-card" data-testid="paywall-card">
+    <div className="paywall-card" data-testid="paywall-card" ref={cardRef}>
       <h3 className="paywall-card__title">
         Unlock Full Pricing &mdash; $19
       </h3>

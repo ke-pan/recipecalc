@@ -19,6 +19,16 @@ vi.mock('../../../hooks/useLemonCheckout.js', () => ({
   useLemonCheckout: () => ({ openCheckout: mockOpenCheckout }),
 }));
 
+// Mock analytics
+const mockTrackEvent = vi.fn();
+vi.mock('../../../lib/analytics', () => ({
+  trackEvent: (...args: unknown[]) => mockTrackEvent(...args),
+  EVENTS: {
+    PAYWALL_VIEW: 'paywall_view',
+    PAYWALL_CLICK: 'paywall_click',
+  },
+}));
+
 /** Wrapper that provides LicenseProvider context. */
 function Wrapper({ children }: { children: ReactNode }) {
   return <LicenseProvider>{children}</LicenseProvider>;
@@ -29,6 +39,20 @@ const TEST_CHECKOUT_URL = 'https://recipecalc.lemonsqueezy.com/buy/test-123';
 describe('PaywallCard', () => {
   beforeEach(() => {
     mockOpenCheckout.mockClear();
+    mockTrackEvent.mockClear();
+
+    // Stub IntersectionObserver for jsdom (not available by default)
+    if (!globalThis.IntersectionObserver) {
+      globalThis.IntersectionObserver = vi.fn(() => ({
+        observe: vi.fn(),
+        disconnect: vi.fn(),
+        unobserve: vi.fn(),
+        takeRecords: vi.fn().mockReturnValue([]),
+        root: null,
+        rootMargin: '',
+        thresholds: [],
+      })) as unknown as typeof IntersectionObserver;
+    }
   });
 
   // --- 1. Rendering ---
@@ -139,5 +163,86 @@ describe('PaywallCard', () => {
     );
 
     expect(screen.getByTestId('paywall-card')).toHaveClass('paywall-card');
+  });
+
+  // --- 6. Analytics events ---
+
+  it('fires PAYWALL_VIEW when card enters viewport via IntersectionObserver', () => {
+    // Capture the IntersectionObserver callback
+    let observerCallback: IntersectionObserverCallback | undefined;
+    const mockDisconnect = vi.fn();
+
+    const MockObserver = vi.fn((callback: IntersectionObserverCallback) => {
+      observerCallback = callback;
+      return {
+        observe: vi.fn(),
+        disconnect: mockDisconnect,
+        unobserve: vi.fn(),
+        takeRecords: vi.fn().mockReturnValue([]),
+        root: null,
+        rootMargin: '',
+        thresholds: [],
+      };
+    });
+    vi.stubGlobal('IntersectionObserver', MockObserver);
+
+    render(
+      <PaywallCard checkoutUrl={TEST_CHECKOUT_URL} />,
+      { wrapper: Wrapper },
+    );
+
+    // Simulate the card entering the viewport
+    observerCallback!(
+      [{ isIntersecting: true } as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    );
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('paywall_view');
+    expect(mockDisconnect).toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
+  it('does not fire PAYWALL_VIEW when card is not intersecting', () => {
+    let observerCallback: IntersectionObserverCallback | undefined;
+
+    const MockObserver = vi.fn((callback: IntersectionObserverCallback) => {
+      observerCallback = callback;
+      return {
+        observe: vi.fn(),
+        disconnect: vi.fn(),
+        unobserve: vi.fn(),
+        takeRecords: vi.fn().mockReturnValue([]),
+        root: null,
+        rootMargin: '',
+        thresholds: [],
+      };
+    });
+    vi.stubGlobal('IntersectionObserver', MockObserver);
+
+    render(
+      <PaywallCard checkoutUrl={TEST_CHECKOUT_URL} />,
+      { wrapper: Wrapper },
+    );
+
+    observerCallback!(
+      [{ isIntersecting: false } as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    );
+
+    expect(mockTrackEvent).not.toHaveBeenCalledWith('paywall_view');
+
+    vi.unstubAllGlobals();
+  });
+
+  it('fires PAYWALL_CLICK when CTA button is clicked', () => {
+    render(
+      <PaywallCard checkoutUrl={TEST_CHECKOUT_URL} />,
+      { wrapper: Wrapper },
+    );
+
+    fireEvent.click(screen.getByTestId('paywall-cta'));
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('paywall_click');
   });
 });

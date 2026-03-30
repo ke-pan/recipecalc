@@ -11,6 +11,8 @@
  * @see https://docs.lemonsqueezy.com/help/lemonjs/handling-events
  */
 
+import { trackEvent, EVENTS } from './analytics';
+
 // ---------------------------------------------------------------------------
 // Types for the global LemonSqueezy object injected by lemon.js
 // ---------------------------------------------------------------------------
@@ -59,6 +61,7 @@ function handleEvent({ event, data }: LemonSqueezyEvent): void {
   if (event === 'Checkout.Success') {
     const licenseKey = data?.order?.first_order_item?.license_key;
     if (licenseKey && onActivateCallback) {
+      trackEvent(EVENTS.PURCHASE_COMPLETE, { channel: 'website' });
       onActivateCallback(licenseKey);
     }
   }
