@@ -26,6 +26,9 @@ import { formatCurrency } from '../../../lib/format.js';
 import { useLicense } from '../../../contexts/LicenseContext.js';
 import './step4.css';
 
+/** Toast message variants. */
+type ToastVariant = 'success' | 'paywall';
+
 export interface Step4Props {
   recipe: Recipe;
   onStartNew: () => void;
@@ -79,6 +82,7 @@ export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
   const [phase, setPhase] = useState<RevealPhase>('skeleton');
   const [countUpProgress, setCountUpProgress] = useState(0);
   const [toastVisible, setToastVisible] = useState(false);
+  const [toastVariant, setToastVariant] = useState<ToastVariant>('success');
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const section4bRef = useRef<HTMLElement>(null);
@@ -174,6 +178,19 @@ export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
     };
   }, []);
 
+  /** Show a toast with the given variant, auto-hide after duration. */
+  const showToast = useCallback((variant: ToastVariant, duration = 3000) => {
+    setToastVariant(variant);
+    setToastVisible(true);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastVisible(false), duration);
+  }, []);
+
+  /** Free-user handler: intercept copy/save and show paywall toast instead. */
+  const handlePaywallTrigger = useCallback(() => {
+    showToast('paywall', 4000);
+  }, [showToast]);
+
   const handleCopy = useCallback(async () => {
     const text = [
       `Recipe: ${recipe.name}`,
@@ -195,10 +212,8 @@ export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
       // Fallback: silently fail (clipboard may not be available in all contexts)
     }
 
-    setToastVisible(true);
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setToastVisible(false), 3000);
-  }, [recipe, costs, pricing, targetCostRatio]);
+    showToast('success');
+  }, [recipe, costs, pricing, targetCostRatio, showToast]);
 
   const handleSliderChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -366,9 +381,79 @@ export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
             </div>
           </>
         ) : (
-          <div className="step4b-locked" data-testid="step4b-locked">
-            <p className="step4b-locked__text">Unlock pricing recommendations</p>
-          </div>
+          <>
+            {/* Recommended price — blurred for free users */}
+            <div
+              className={`step4-recommended step4-recommended--visible blurred-price`}
+              data-testid="recommended-section"
+            >
+              <h3 className="step4-recommended__heading">Recommended Selling Price</h3>
+              <div className="step4-recommended__price" data-testid="recommended-price-unit">
+                {formatCurrency(pricing.recommendedPricePerUnit)}
+              </div>
+              <div className="step4-recommended__subtitle">
+                per {recipe.quantityUnit.replace(/s$/, '')}
+              </div>
+              <div className="step4-recommended__batch" data-testid="recommended-price-batch">
+                {formatCurrency(pricing.recommendedPricePerBatch)} per batch
+              </div>
+              <div className="step4-recommended__margin" data-testid="profit-margin">
+                {Math.round(pricing.profitMargin * 100)}% profit margin
+              </div>
+            </div>
+
+            {/* Target cost ratio slider — locked for free users */}
+            <div className="step4-slider locked-slider" data-testid="slider-section">
+              <div className="step4-slider__header">
+                <label htmlFor="cost-ratio-slider-locked" className="step4-slider__label">
+                  Target cost ratio <span className="locked-slider__icon" aria-label="Locked">&#x1F512;</span>
+                </label>
+                <span className="step4-slider__value" data-testid="slider-value">
+                  {Math.round(targetCostRatio * 100)}%
+                </span>
+              </div>
+              <input
+                id="cost-ratio-slider-locked"
+                type="range"
+                className="step4-slider__input"
+                min="0.2"
+                max="0.5"
+                step="0.01"
+                value={targetCostRatio}
+                disabled
+                aria-valuemin={20}
+                aria-valuemax={50}
+                aria-valuenow={Math.round(targetCostRatio * 100)}
+                aria-valuetext={`${Math.round(targetCostRatio * 100)}%`}
+              />
+              <div className="step4-slider__range">
+                <span className="step4-slider__range-label">20% (higher margin)</span>
+                <span className="step4-slider__range-label">50% (lower margin)</span>
+              </div>
+            </div>
+
+            {/* Copy button — triggers paywall toast for free users */}
+            <div className="step4-actions" data-testid="actions-section">
+              <button
+                type="button"
+                className="step4-btn step4-btn--copy"
+                onClick={handlePaywallTrigger}
+                aria-label="Copy results to clipboard"
+                data-testid="copy-button"
+              >
+                Copy results
+              </button>
+              <button
+                type="button"
+                className="step4-btn step4-btn--copy"
+                onClick={handlePaywallTrigger}
+                aria-label="Save results"
+                data-testid="save-button"
+              >
+                Save results
+              </button>
+            </div>
+          </>
         )}
       </section>
 
@@ -389,12 +474,21 @@ export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
 
       {/* Toast notification */}
       <div
-        className={`step4-toast ${toastVisible ? 'step4-toast--visible' : ''}`}
+        className={`step4-toast ${toastVisible ? 'step4-toast--visible' : ''} ${toastVariant === 'paywall' ? 'step4-toast--paywall' : ''}`}
         role="status"
         aria-live="polite"
         data-testid="toast"
       >
-        Copied!
+        {toastVariant === 'paywall' ? (
+          <>
+            Unlock with a license key{' '}
+            <a href="/activate" className="step4-toast__link" data-testid="toast-activate-link">
+              Activate
+            </a>
+          </>
+        ) : (
+          'Copied!'
+        )}
       </div>
     </div>
   );

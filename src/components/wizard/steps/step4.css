@@ -60,20 +60,27 @@
 }
 
 /* --------------------------------------------------------------------------
-   Step 4b locked state — placeholder for free users
+   Step 4b locked state — blurred pricing & locked slider for free users
    -------------------------------------------------------------------------- */
 
-.step4b-locked {
-  text-align: center;
-  padding: var(--space-xl) var(--space-md);
+.blurred-price {
+  filter: blur(8px);
+  user-select: none;
+  pointer-events: none;
 }
 
-.step4b-locked__text {
-  font-family: var(--font-body);
-  font-size: var(--text-lg);
-  font-weight: 500;
-  color: var(--text-muted);
-  margin: 0;
+.locked-slider {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.locked-slider .step4-slider__input {
+  cursor: not-allowed;
+}
+
+.locked-slider__icon {
+  margin-left: var(--space-xs);
+  font-size: var(--text-sm);
 }
 
 /* --------------------------------------------------------------------------
@@ -453,6 +460,23 @@
 
 .step4-toast--visible {
   opacity: 1;
+  pointer-events: auto;
+}
+
+.step4-toast--paywall {
+  background-color: var(--caution);
+  color: #fff;
+}
+
+.step4-toast__link {
+  color: #fff;
+  font-weight: 600;
+  text-decoration: underline;
+  margin-left: var(--space-xs);
+}
+
+.step4-toast__link:hover {
+  opacity: 0.85;
 }
 
 /* --------------------------------------------------------------------------

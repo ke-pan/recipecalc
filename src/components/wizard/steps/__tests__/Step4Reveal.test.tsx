@@ -560,9 +560,9 @@ describe('Step4Reveal', () => {
     expect(sharedActions.querySelector('[data-testid="start-new-button"]')).toBeInTheDocument();
   });
 
-  // --- 16. Locked state (isUnlocked=false) ---
+  // --- 16. Locked state (isUnlocked=false) — blurred pricing & locked slider ---
 
-  it('shows placeholder text when license is locked', () => {
+  it('renders blurred recommended price when locked', () => {
     setLicenseLocked();
 
     render(
@@ -570,11 +570,14 @@ describe('Step4Reveal', () => {
       { wrapper: Wrapper },
     );
 
-    expect(screen.getByTestId('step4b-locked')).toBeInTheDocument();
-    expect(screen.getByText('Unlock pricing recommendations')).toBeInTheDocument();
+    const recommended = screen.getByTestId('recommended-section');
+    expect(recommended).toBeInTheDocument();
+    expect(recommended).toHaveClass('blurred-price');
+    // Real number is in the DOM (honor system — intentional per RFC)
+    expect(screen.getByTestId('recommended-price-unit')).toHaveTextContent('$7.77');
   });
 
-  it('does not show pricing, slider, or copy when locked', () => {
+  it('renders a disabled slider with lock icon when locked', () => {
     setLicenseLocked();
 
     render(
@@ -582,9 +585,106 @@ describe('Step4Reveal', () => {
       { wrapper: Wrapper },
     );
 
-    expect(screen.queryByTestId('recommended-section')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('slider-section')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('copy-button')).not.toBeInTheDocument();
+    const sliderSection = screen.getByTestId('slider-section');
+    expect(sliderSection).toHaveClass('locked-slider');
+
+    const slider = sliderSection.querySelector('input[type="range"]');
+    expect(slider).toBeDisabled();
+
+    // Lock icon is present
+    expect(sliderSection).toHaveTextContent('\u{1F512}');
+  });
+
+  it('shows paywall toast when copy button is clicked while locked', async () => {
+    setLicenseLocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    const copyBtn = screen.getByTestId('copy-button');
+    await act(async () => {
+      fireEvent.click(copyBtn);
+    });
+
+    const toast = screen.getByTestId('toast');
+    expect(toast).toHaveClass('step4-toast--visible');
+    expect(toast).toHaveClass('step4-toast--paywall');
+    expect(toast).toHaveTextContent('Unlock with a license key');
+  });
+
+  it('shows paywall toast when save button is clicked while locked', async () => {
+    setLicenseLocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    const saveBtn = screen.getByTestId('save-button');
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
+
+    const toast = screen.getByTestId('toast');
+    expect(toast).toHaveClass('step4-toast--visible');
+    expect(toast).toHaveClass('step4-toast--paywall');
+    expect(toast).toHaveTextContent('Unlock with a license key');
+  });
+
+  it('paywall toast contains an activate link', async () => {
+    setLicenseLocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('copy-button'));
+    });
+
+    const link = screen.getByTestId('toast-activate-link');
+    expect(link).toHaveAttribute('href', '/activate');
+    expect(link).toHaveTextContent('Activate');
+  });
+
+  it('does not copy to clipboard when locked user clicks copy', async () => {
+    setLicenseLocked();
+    const writeText = mockClipboard();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('copy-button'));
+    });
+
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
+  it('paywall toast auto-hides after 4 seconds', async () => {
+    setLicenseLocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('copy-button'));
+    });
+
+    expect(screen.getByTestId('toast')).toHaveClass('step4-toast--visible');
+
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+
+    expect(screen.getByTestId('toast')).not.toHaveClass('step4-toast--visible');
   });
 
   it('still shows step 4a reveal content when locked', () => {
@@ -622,5 +722,62 @@ describe('Step4Reveal', () => {
     );
 
     expect(screen.getByTestId('step4a-cta')).toBeInTheDocument();
+  });
+
+  it('renders same DOM structure for pricing in both locked and unlocked states', () => {
+    // Locked: verify presence of recommended-section, slider-section, copy-button
+    setLicenseLocked();
+
+    const { unmount } = render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    const section4b = screen.getByTestId('step4b-pricing');
+    expect(section4b.querySelector('[data-testid="recommended-section"]')).toBeInTheDocument();
+    expect(section4b.querySelector('[data-testid="slider-section"]')).toBeInTheDocument();
+    expect(section4b.querySelector('[data-testid="copy-button"]')).toBeInTheDocument();
+
+    unmount();
+
+    // Unlocked: same test IDs are present
+    setLicenseUnlocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    const section4bUnlocked = screen.getByTestId('step4b-pricing');
+    expect(section4bUnlocked.querySelector('[data-testid="recommended-section"]')).toBeInTheDocument();
+    expect(section4bUnlocked.querySelector('[data-testid="slider-section"]')).toBeInTheDocument();
+    expect(section4bUnlocked.querySelector('[data-testid="copy-button"]')).toBeInTheDocument();
+  });
+
+  // --- 17. Unlocked state has no blur or lock ---
+
+  it('unlocked user sees no blur on recommended price', () => {
+    setLicenseUnlocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    const recommended = screen.getByTestId('recommended-section');
+    expect(recommended).not.toHaveClass('blurred-price');
+  });
+
+  it('unlocked user slider is not disabled', () => {
+    setLicenseUnlocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    const slider = screen.getByRole('slider');
+    expect(slider).not.toBeDisabled();
+    expect(screen.getByTestId('slider-section')).not.toHaveClass('locked-slider');
   });
 });
