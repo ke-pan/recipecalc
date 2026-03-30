@@ -609,6 +609,30 @@ describe('Step4Reveal', () => {
     expect(screen.getByTestId('recommended-price-unit')).toHaveTextContent('$7.77');
   });
 
+  it('blurred price section has aria-hidden="true" when locked', () => {
+    setLicenseLocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    const recommended = screen.getByTestId('recommended-section');
+    expect(recommended).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('provides sr-only text alternative for blurred price', () => {
+    setLicenseLocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.getByText('Price hidden. Unlock to view.')).toBeInTheDocument();
+    expect(screen.getByText('Price hidden. Unlock to view.')).toHaveClass('sr-only');
+  });
+
   it('renders a disabled slider with lock icon when locked', () => {
     setLicenseLocked();
 
@@ -625,6 +649,22 @@ describe('Step4Reveal', () => {
 
     // Lock icon is present
     expect(sliderSection).toHaveTextContent('\u{1F512}');
+  });
+
+  it('locked slider has aria-disabled="true"', () => {
+    setLicenseLocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    const sliderSection = screen.getByTestId('slider-section');
+    expect(sliderSection).toHaveAttribute('aria-disabled', 'true');
+
+    const slider = sliderSection.querySelector('input[type="range"]');
+    expect(slider).toHaveAttribute('aria-disabled', 'true');
+    expect(slider).toHaveAttribute('aria-label', 'Target cost ratio slider — locked, unlock to adjust');
   });
 
   it('shows paywall toast when copy button is clicked while locked', async () => {

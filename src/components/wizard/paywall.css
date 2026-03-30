@@ -113,13 +113,19 @@
    Responsive — ensure the card works at 375px
    -------------------------------------------------------------------------- */
 
-@media (max-width: 374px) {
+@media (max-width: 480px) {
   .paywall-card {
     padding: var(--space-md);
+    margin-left: calc(-1 * var(--space-xs));
+    margin-right: calc(-1 * var(--space-xs));
   }
 
   .paywall-card__title {
     font-size: var(--text-lg);
+  }
+
+  .paywall-card__feature {
+    font-size: var(--text-sm);
   }
 
   .paywall-card__cta {

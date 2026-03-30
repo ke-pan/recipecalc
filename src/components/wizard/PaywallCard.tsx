@@ -46,7 +46,7 @@ export default function PaywallCard({ checkoutUrl }: PaywallCardProps) {
   };
 
   return (
-    <div className="paywall-card" data-testid="paywall-card" ref={cardRef}>
+    <div className="paywall-card" data-testid="paywall-card" ref={cardRef} role="region" aria-label="Unlock pricing">
       <h3 className="paywall-card__title">
         Unlock Full Pricing &mdash; $19
       </h3>

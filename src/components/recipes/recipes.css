@@ -397,6 +397,43 @@
    Responsive
    -------------------------------------------------------------------------- */
 
+@media (max-width: 480px) {
+  .recipes {
+    padding: var(--space-md) var(--space-sm);
+  }
+
+  .recipes__header {
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .recipes__card {
+    padding: var(--space-md);
+  }
+
+  .recipes__card-header {
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .recipes__card-numbers {
+    gap: var(--space-md);
+  }
+
+  .recipes__card-actions {
+    flex-direction: column;
+  }
+
+  .recipes__card-actions .recipes__btn {
+    width: 100%;
+  }
+
+  .recipes__footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 @media (min-width: 768px) {
   .recipes {
     padding: var(--space-xl) var(--space-lg);

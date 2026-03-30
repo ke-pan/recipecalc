@@ -298,6 +298,31 @@ describe('ActivatePage', () => {
     });
   });
 
+  it('has an aria-live="polite" region for status messages', () => {
+    render(<ActivatePage />);
+    const statusRegion = screen.getByTestId('activate-status');
+    expect(statusRegion).toHaveAttribute('aria-live', 'polite');
+  });
+
+  it('announces validating state to screen readers via aria-live', async () => {
+    let resolveActivate: (value: unknown) => void;
+    mockActivate.mockReturnValue(new Promise((resolve) => { resolveActivate = resolve; }));
+
+    const user = userEvent.setup();
+    render(<ActivatePage />);
+
+    const input = screen.getByPlaceholderText('Paste your license key');
+    await user.type(input, 'test-key');
+    await user.click(screen.getByText('Activate'));
+
+    // The sr-only text should be present in the aria-live region
+    const statusRegion = screen.getByTestId('activate-status');
+    expect(statusRegion).toHaveTextContent('Validating your license key...');
+
+    // Cleanup: resolve the promise
+    resolveActivate!({ ok: true, instanceId: 'id', activatedAt: '2026-01-01T00:00:00Z' });
+  });
+
   // ---- Retry (ERROR → IDLE) ----
 
   it('allows retry after error via "Try again" button', async () => {
