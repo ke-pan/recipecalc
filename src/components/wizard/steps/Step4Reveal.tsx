@@ -25,6 +25,7 @@ import type { Recipe, CostBreakdown, PricingResult } from '../../../lib/calc/typ
 import { formatCurrency } from '../../../lib/format.js';
 import { useLicense } from '../../../contexts/LicenseContext.js';
 import NudgeBanner from '../NudgeBanner.js';
+import PaywallCard from '../PaywallCard.js';
 import './step4.css';
 
 /** Toast message variants. */
@@ -66,6 +67,12 @@ const PHASE_ORDER: Record<RevealPhase, number> = {
   recommended: 5,
   complete: 6,
 };
+
+/** LemonSqueezy checkout URL from environment. */
+const CHECKOUT_URL =
+  typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_LS_CHECKOUT_URL
+    ? String(import.meta.env.PUBLIC_LS_CHECKOUT_URL)
+    : '';
 
 /** Detect edge case: all hidden costs are zero. */
 function allHiddenCostsZero(recipe: Recipe): boolean {
@@ -516,6 +523,9 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep }: Step4Pro
                 Save results
               </button>
             </div>
+
+            {/* Paywall Card — inline dashed-border card below blurred pricing */}
+            <PaywallCard checkoutUrl={CHECKOUT_URL} />
           </>
         )}
       </section>

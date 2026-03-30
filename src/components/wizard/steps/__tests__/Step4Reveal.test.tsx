@@ -14,6 +14,12 @@ vi.mock('../../../../services/lemonsqueezy.js', () => ({
   },
 }));
 
+// Mock useLemonCheckout so PaywallCard can render without real Lemon.js
+const mockOpenCheckout = vi.fn();
+vi.mock('../../../../hooks/useLemonCheckout.js', () => ({
+  useLemonCheckout: () => ({ openCheckout: mockOpenCheckout }),
+}));
+
 // --- Test fixture ---
 
 function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
@@ -781,8 +787,49 @@ describe('Step4Reveal', () => {
     expect(screen.getByTestId('slider-section')).not.toHaveClass('locked-slider');
   });
 
+  // --- 18. PaywallCard integration ---
+
+  it('shows PaywallCard for free users (locked)', () => {
+    setLicenseLocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.getByTestId('paywall-card')).toBeInTheDocument();
+    expect(screen.getByText(/Unlock Full Pricing/)).toBeInTheDocument();
+    expect(screen.getByText('one-time, not a subscription')).toBeInTheDocument();
+    expect(screen.getByTestId('paywall-cta')).toBeInTheDocument();
+    expect(screen.getByTestId('paywall-activate-link')).toHaveAttribute('href', '/activate');
+  });
+
+  it('does not show PaywallCard for paid users (unlocked)', () => {
+    setLicenseUnlocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.queryByTestId('paywall-card')).not.toBeInTheDocument();
+  });
+
+  it('PaywallCard CTA calls openCheckout when clicked', () => {
+    setLicenseLocked();
+    mockOpenCheckout.mockClear();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    fireEvent.click(screen.getByTestId('paywall-cta'));
+    expect(mockOpenCheckout).toHaveBeenCalledOnce();
+  });
+
   // =======================================================================
-  // 17. Edge case nudges
+  // 19. Edge case nudges
   // =======================================================================
 
   describe('Nudge: all hidden costs = $0 (scenario 1)', () => {
