@@ -148,6 +148,15 @@
 }
 
 /* --------------------------------------------------------------------------
+   Neutral variant — used when hidden costs are unusually low (scenario 3)
+   Grey borders instead of normal colors to de-emphasize the comparison.
+   -------------------------------------------------------------------------- */
+
+.step4-box--neutral {
+  border: 2px solid var(--border);
+}
+
+/* --------------------------------------------------------------------------
    Skeleton shimmer — shown during initial reveal delay
    -------------------------------------------------------------------------- */
 

@@ -1,0 +1,87 @@
+/* ==========================================================================
+   NudgeBanner — gentle caution-style inline reminder
+   Follows DESIGN.md: caution background + small icon, NOT border-left.
+   ========================================================================== */
+
+.nudge-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  background-color: color-mix(in srgb, var(--caution) 10%, var(--surface));
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.nudge-banner__icon {
+  flex-shrink: 0;
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--caution);
+}
+
+.nudge-banner__message {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.nudge-banner__cta {
+  display: inline;
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.nudge-banner__cta:hover {
+  opacity: 0.8;
+}
+
+.nudge-banner__cta:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.nudge-banner__close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  font-size: var(--text-lg);
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-micro) var(--ease-enter);
+}
+
+.nudge-banner__close:hover {
+  color: var(--text-primary);
+}
+
+.nudge-banner__close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .nudge-banner__close {
+    transition: none;
+  }
+}
