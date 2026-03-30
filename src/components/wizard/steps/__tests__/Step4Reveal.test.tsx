@@ -1120,4 +1120,133 @@ describe('Step4Reveal', () => {
       expect(screen.getByTestId('step4a-cta')).toBeInTheDocument();
     });
   });
+
+  // =======================================================================
+  // Save recipe functionality
+  // =======================================================================
+
+  describe('Save recipe (paid user)', () => {
+    const mockSave = vi.fn().mockReturnValue({ id: 'new-uuid' });
+    const mockUpdate = vi.fn();
+
+    beforeEach(() => {
+      mockSave.mockClear();
+      mockUpdate.mockClear();
+
+      vi.doMock('../../../../hooks/useRecipes.js', () => ({
+        useRecipes: () => ({
+          recipes: [],
+          save: mockSave,
+          update: mockUpdate,
+          remove: vi.fn(),
+          exportAll: vi.fn(),
+          importRecipes: vi.fn(),
+        }),
+        readRecipes: () => [],
+      }));
+    });
+
+    it('renders save button for paid users', () => {
+      setLicenseUnlocked();
+
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      const saveBtn = screen.getByTestId('save-button');
+      expect(saveBtn).toBeInTheDocument();
+      expect(saveBtn).toHaveTextContent('Save recipe');
+    });
+
+    it('shows "Recipe saved!" toast when save button is clicked', async () => {
+      setLicenseUnlocked();
+
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      const saveBtn = screen.getByTestId('save-button');
+      await act(async () => {
+        fireEvent.click(saveBtn);
+      });
+
+      const toast = screen.getByTestId('toast');
+      expect(toast).toHaveClass('step4-toast--visible');
+      expect(toast).toHaveTextContent('Recipe saved!');
+    });
+
+    it('save toast auto-hides after 3 seconds', async () => {
+      setLicenseUnlocked();
+
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('save-button'));
+      });
+
+      expect(screen.getByTestId('toast')).toHaveClass('step4-toast--visible');
+
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(screen.getByTestId('toast')).not.toHaveClass('step4-toast--visible');
+    });
+
+    it('save button has correct aria-label', () => {
+      setLicenseUnlocked();
+
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      expect(screen.getByRole('button', { name: 'Save recipe' })).toBeInTheDocument();
+    });
+
+    it('save button is in step 4b section for paid users', () => {
+      setLicenseUnlocked();
+
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      const section4b = screen.getByTestId('step4b-pricing');
+      expect(section4b.querySelector('[data-testid="save-button"]')).toBeInTheDocument();
+    });
+
+    it('save button is in step 4b section for free users (triggers paywall)', () => {
+      setLicenseLocked();
+
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      const section4b = screen.getByTestId('step4b-pricing');
+      expect(section4b.querySelector('[data-testid="save-button"]')).toBeInTheDocument();
+    });
+
+    it('save toast does not have paywall class', async () => {
+      setLicenseUnlocked();
+
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('save-button'));
+      });
+
+      const toast = screen.getByTestId('toast');
+      expect(toast).not.toHaveClass('step4-toast--paywall');
+    });
+  });
 });

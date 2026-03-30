@@ -35,7 +35,12 @@ vi.mock('../steps/Step3LaborOverhead', () => ({
 }));
 
 vi.mock('../steps/Step4Reveal', () => ({
-  default: () => <div data-testid="step4">Step 4 content</div>,
+  default: ({ editingRecipeId }: { editingRecipeId?: string | null }) => (
+    <div data-testid="step4" data-editing-id={editingRecipeId ?? ''}>
+      Step 4 content
+      {editingRecipeId && <span data-testid="editing-id">{editingRecipeId}</span>}
+    </div>
+  ),
 }));
 
 vi.mock('../../../hooks/useRecipePersistence', () => ({
@@ -46,6 +51,11 @@ vi.mock('../../../hooks/useRecipePersistence', () => ({
     dismiss: vi.fn(),
     showResume: false,
   }),
+}));
+
+const mockReadRecipes = vi.fn().mockReturnValue([]);
+vi.mock('../../../hooks/useRecipes', () => ({
+  readRecipes: (...args: unknown[]) => mockReadRecipes(...args),
 }));
 
 function mockMatchMedia(matches: boolean) {
@@ -275,5 +285,110 @@ describe('WizardShell', () => {
     act(() => { vi.advanceTimersByTime(250); });
     const content = document.querySelector('.wizard-content');
     expect(content?.getAttribute('data-step')).toBe('3');
+  });
+
+  // --- ?edit=<id> flow ---
+
+  describe('edit recipe via ?edit=<id>', () => {
+    const savedRecipe = {
+      id: 'saved-recipe-123',
+      version: 1,
+      savedAt: '2026-03-01T00:00:00Z',
+      updatedAt: '2026-03-01T00:00:00Z',
+      recipe: {
+        name: 'Saved Cookies',
+        quantity: 12,
+        quantityUnit: 'cookies',
+        batchTimeHours: 1,
+        ingredients: [],
+        laborAndOverhead: { hourlyRate: 15, packaging: 2, overhead: 1, platformFees: 0 },
+      },
+      targetCostRatio: 0.35,
+    };
+
+    let originalLocation: Location;
+
+    beforeEach(() => {
+      originalLocation = window.location;
+    });
+
+    afterEach(() => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: originalLocation,
+      });
+      mockReadRecipes.mockReturnValue([]);
+    });
+
+    it('loads saved recipe and jumps to step 4 when ?edit=<id> matches', () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { ...originalLocation, search: '?edit=saved-recipe-123' },
+      });
+      mockReadRecipes.mockReturnValue([savedRecipe]);
+
+      render(<WizardShell />);
+      act(() => { vi.advanceTimersByTime(250); });
+
+      // Should jump to step 4
+      expect(screen.getByTestId('step4')).toBeInTheDocument();
+    });
+
+    it('passes editingRecipeId to Step4Reveal', () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { ...originalLocation, search: '?edit=saved-recipe-123' },
+      });
+      mockReadRecipes.mockReturnValue([savedRecipe]);
+
+      render(<WizardShell />);
+      act(() => { vi.advanceTimersByTime(250); });
+
+      expect(screen.getByTestId('editing-id')).toHaveTextContent('saved-recipe-123');
+    });
+
+    it('stays on step 1 when ?edit=<id> does not match any saved recipe', () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { ...originalLocation, search: '?edit=nonexistent-id' },
+      });
+      mockReadRecipes.mockReturnValue([savedRecipe]);
+
+      render(<WizardShell />);
+      act(() => { vi.advanceTimersByTime(250); });
+
+      expect(screen.getByTestId('step1')).toBeInTheDocument();
+    });
+
+    it('stays on step 1 when no ?edit param is present', () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { ...originalLocation, search: '' },
+      });
+
+      render(<WizardShell />);
+      act(() => { vi.advanceTimersByTime(250); });
+
+      expect(screen.getByTestId('step1')).toBeInTheDocument();
+    });
+
+    it('does not pass editingRecipeId when no ?edit param', () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { ...originalLocation, search: '' },
+      });
+
+      render(<WizardShell />);
+      act(() => { vi.advanceTimersByTime(250); });
+
+      // Navigate to step 4 normally
+      clickNextAndWait();
+      clickNextAndWait();
+      fireEvent.click(screen.getByText(/See your true cost/));
+      act(() => { vi.advanceTimersByTime(250); });
+
+      expect(screen.getByTestId('step4')).toBeInTheDocument();
+      expect(screen.queryByTestId('editing-id')).not.toBeInTheDocument();
+    });
   });
 });
