@@ -58,7 +58,7 @@ function isValidSavedRecipe(item: unknown): item is SavedRecipe {
   );
 }
 
-function readRecipes(): SavedRecipe[] {
+export function readRecipes(): SavedRecipe[] {
   const raw = safeStorage(() => localStorage.getItem(STORAGE_KEY));
   if (!raw) return [];
 

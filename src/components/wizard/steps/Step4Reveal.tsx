@@ -24,16 +24,19 @@ import { calculateTotalCosts, calculatePricing } from '../../../lib/calc/pricing
 import type { Recipe, CostBreakdown, PricingResult } from '../../../lib/calc/types.js';
 import { formatCurrency } from '../../../lib/format.js';
 import { useLicense } from '../../../contexts/LicenseContext.js';
+import { useRecipes } from '../../../hooks/useRecipes.js';
 import NudgeBanner from '../NudgeBanner.js';
 import './step4.css';
 
 /** Toast message variants. */
-type ToastVariant = 'success' | 'paywall';
+type ToastVariant = 'success' | 'paywall' | 'saved';
 
 export interface Step4Props {
   recipe: Recipe;
   onStartNew: () => void;
   onGoToStep: (step: number) => void;
+  /** When editing a previously saved recipe, this is the saved recipe's ID. */
+  editingRecipeId?: string | null;
 }
 
 /** Animation phase enum for sequenced reveal. */
@@ -83,8 +86,9 @@ function ingredientCostExceedsTrueTotal(costs: CostBreakdown): boolean {
   return costs.ingredientCost >= costs.trueTotalCost;
 }
 
-export default function Step4Reveal({ recipe, onStartNew, onGoToStep }: Step4Props) {
+export default function Step4Reveal({ recipe, onStartNew, onGoToStep, editingRecipeId }: Step4Props) {
   const { isUnlocked } = useLicense();
+  const { save, update } = useRecipes();
   const costs: CostBreakdown = calculateTotalCosts(recipe);
 
   // Slider state
@@ -220,6 +224,16 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep }: Step4Pro
   const handlePaywallTrigger = useCallback(() => {
     showToast('paywall', 4000);
   }, [showToast]);
+
+  /** Paid-user handler: save recipe to localStorage recipe library. */
+  const handleSave = useCallback(() => {
+    if (editingRecipeId) {
+      update(editingRecipeId, recipe, targetCostRatio);
+    } else {
+      save(recipe, targetCostRatio);
+    }
+    showToast('saved');
+  }, [editingRecipeId, recipe, targetCostRatio, save, update, showToast]);
 
   const handleCopy = useCallback(async () => {
     const text = [
@@ -430,7 +444,7 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep }: Step4Pro
               </div>
             </div>
 
-            {/* Copy button (paid users only) */}
+            {/* Copy & Save buttons (paid users only) */}
             <div className="step4-actions" data-testid="actions-section">
               <button
                 type="button"
@@ -440,6 +454,15 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep }: Step4Pro
                 data-testid="copy-button"
               >
                 Copy results
+              </button>
+              <button
+                type="button"
+                className="step4-btn step4-btn--copy"
+                onClick={handleSave}
+                aria-label="Save recipe"
+                data-testid="save-button"
+              >
+                Save recipe
               </button>
             </div>
           </>
@@ -549,6 +572,8 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep }: Step4Pro
               Activate
             </a>
           </>
+        ) : toastVariant === 'saved' ? (
+          'Recipe saved!'
         ) : (
           'Copied!'
         )}

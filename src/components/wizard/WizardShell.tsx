@@ -8,6 +8,7 @@ import Step2Ingredients from './steps/Step2Ingredients';
 import Step3LaborOverhead from './steps/Step3LaborOverhead';
 import Step4Reveal from './steps/Step4Reveal';
 import { useRecipePersistence } from '../../hooks/useRecipePersistence';
+import { readRecipes } from '../../hooks/useRecipes';
 import { LicenseProvider } from '../../contexts/LicenseContext';
 import './wizard.css';
 
@@ -24,6 +25,9 @@ export default function WizardShell() {
   // Key to force re-mount of step components after resume (so local state re-initializes from props)
   const [restoreKey, setRestoreKey] = useState(0);
 
+  // Track editing state when loading a saved recipe via ?edit=<id>
+  const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
+
   // localStorage persistence
   const { savedData, save, clear, dismiss, showResume } = useRecipePersistence();
 
@@ -38,6 +42,24 @@ export default function WizardShell() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [displayStep, setDisplayStep] = useState(currentStep);
   const prevStepRef = useRef(currentStep);
+
+  // On mount: detect ?edit=<id> and load saved recipe for editing
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const editId = params.get('edit');
+    if (!editId) return;
+
+    const savedRecipes = readRecipes();
+    const found = savedRecipes.find((r) => r.id === editId);
+    if (!found) return;
+
+    setEditingRecipeId(editId);
+    dispatch({ type: 'RESTORE_STATE', step: 3, recipe: found.recipe });
+    setStepValid([true, true, true, true]);
+    setDisplayStep(3);
+    prevStepRef.current = 3;
+    setRestoreKey((k) => k + 1);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (currentStep === prevStepRef.current) return;
@@ -87,6 +109,7 @@ export default function WizardShell() {
   const handleStartNew = useCallback(() => {
     clear();
     dispatch({ type: 'RESET' });
+    setEditingRecipeId(null);
     setStepValid([false, false, true, true]);
     setDisplayStep(0);
     prevStepRef.current = 0;
@@ -161,6 +184,7 @@ export default function WizardShell() {
             recipe={recipe}
             onStartNew={handleStartNew}
             onGoToStep={handleGoToStep}
+            editingRecipeId={editingRecipeId}
           />
         );
       default:
