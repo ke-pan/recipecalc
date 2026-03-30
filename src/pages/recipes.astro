@@ -1,0 +1,8 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import RecipesPage from '../components/recipes/RecipesPage';
+---
+
+<BaseLayout title="My Recipes — RecipeCalc" description="Manage your saved recipes, view costs, and edit pricing.">
+  <RecipesPage client:load />
+</BaseLayout>
