@@ -10,6 +10,7 @@ import Step4Reveal from './steps/Step4Reveal';
 import { useRecipePersistence } from '../../hooks/useRecipePersistence';
 import { readRecipes } from '../../hooks/useRecipes';
 import { LicenseProvider } from '../../contexts/LicenseContext';
+import { trackEvent, EVENTS } from '../../lib/analytics';
 import './wizard.css';
 
 /** CTA button labels per step (step 3 has its own actions, so no entry needed) */
@@ -98,6 +99,10 @@ export default function WizardShell() {
   const handleNext = useCallback(() => {
     if (currentStep >= STEP_COUNT - 1) return;
     if (!stepValid[currentStep]) return;
+    trackEvent(EVENTS.STEP_COMPLETE, { step: String(currentStep + 1) });
+    if (currentStep + 1 === STEP_COUNT - 1) {
+      trackEvent(EVENTS.WIZARD_COMPLETE);
+    }
     dispatch({ type: 'MARK_STEP_COMPLETED', step: currentStep });
     dispatch({ type: 'NEXT_STEP' });
   }, [currentStep, stepValid]);
@@ -107,6 +112,7 @@ export default function WizardShell() {
   const handleGoToStep = (step: number) => dispatch({ type: 'GO_TO_STEP', step });
 
   const handleStartNew = useCallback(() => {
+    trackEvent(EVENTS.NEW_RECIPE);
     clear();
     dispatch({ type: 'RESET' });
     setEditingRecipeId(null);
@@ -117,6 +123,7 @@ export default function WizardShell() {
 
   const handleResumeContinue = useCallback(() => {
     if (!savedData) { dismiss(); return; }
+    trackEvent(EVENTS.RESUME_RECIPE);
     dispatch({ type: 'RESTORE_STATE', step: savedData.step, recipe: savedData.recipe });
     setStepValid(prev => {
       const next = [...prev];

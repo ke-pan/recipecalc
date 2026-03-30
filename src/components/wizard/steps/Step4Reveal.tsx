@@ -25,6 +25,7 @@ import type { Recipe, CostBreakdown, PricingResult } from '../../../lib/calc/typ
 import { formatCurrency } from '../../../lib/format.js';
 import { useLicense } from '../../../contexts/LicenseContext.js';
 import { useRecipes } from '../../../hooks/useRecipes.js';
+import { trackEvent, EVENTS } from '../../../lib/analytics';
 import NudgeBanner from '../NudgeBanner.js';
 import PaywallCard from '../PaywallCard.js';
 import './step4.css';
@@ -234,6 +235,7 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep, editingRec
 
   /** Paid-user handler: save recipe to localStorage recipe library. */
   const handleSave = useCallback(() => {
+    trackEvent(EVENTS.SAVE_RECIPE);
     if (editingRecipeId) {
       update(editingRecipeId, recipe, targetCostRatio);
     } else {
@@ -243,6 +245,7 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep, editingRec
   }, [editingRecipeId, recipe, targetCostRatio, save, update, showToast]);
 
   const handleCopy = useCallback(async () => {
+    trackEvent(EVENTS.COPY_RESULT);
     const text = [
       `Recipe: ${recipe.name}`,
       `Quantity: ${recipe.quantity} ${recipe.quantityUnit}`,

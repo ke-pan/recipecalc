@@ -17,6 +17,7 @@ import {
   openCheckout as lemonOpenCheckout,
 } from '../lib/lemonjs.js';
 import { useLicense } from '../contexts/LicenseContext.js';
+import { trackEvent, EVENTS } from '../lib/analytics';
 
 const DEFAULT_CHECKOUT_URL =
   typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_LS_CHECKOUT_URL
@@ -37,8 +38,13 @@ export function useLemonCheckout(): UseLemonCheckoutReturn {
   activateRef.current = activate;
 
   useEffect(() => {
-    setupLemonSqueezy((licenseKey: string) => {
-      activateRef.current(licenseKey);
+    setupLemonSqueezy(async (licenseKey: string) => {
+      const result = await activateRef.current(licenseKey);
+      if (result.ok) {
+        trackEvent(EVENTS.ACTIVATE_SUCCESS, { channel: 'website' });
+      } else {
+        trackEvent(EVENTS.ACTIVATE_FAIL, { reason: result.reason });
+      }
     });
   }, []);
 

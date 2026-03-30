@@ -20,6 +20,18 @@ vi.mock('../../../../hooks/useLemonCheckout.js', () => ({
   useLemonCheckout: () => ({ openCheckout: mockOpenCheckout }),
 }));
 
+// Mock analytics
+const mockTrackEvent = vi.fn();
+vi.mock('../../../../lib/analytics', () => ({
+  trackEvent: (...args: unknown[]) => mockTrackEvent(...args),
+  EVENTS: {
+    COPY_RESULT: 'copy_result',
+    SAVE_RECIPE: 'save_recipe',
+    PAYWALL_VIEW: 'paywall_view',
+    PAYWALL_CLICK: 'paywall_click',
+  },
+}));
+
 // --- Test fixture ---
 
 function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
@@ -139,6 +151,20 @@ describe('Step4Reveal', () => {
     setLicenseUnlocked(); // Default: license active (isUnlocked=true) to preserve MVP behavior
     onStartNew.mockClear();
     onGoToStep.mockClear();
+    mockTrackEvent.mockClear();
+
+    // Stub IntersectionObserver for PaywallCard (rendered in locked state)
+    if (!globalThis.IntersectionObserver) {
+      globalThis.IntersectionObserver = vi.fn(() => ({
+        observe: vi.fn(),
+        disconnect: vi.fn(),
+        unobserve: vi.fn(),
+        takeRecords: vi.fn().mockReturnValue([]),
+        root: null,
+        rootMargin: '',
+        thresholds: [],
+      })) as unknown as typeof IntersectionObserver;
+    }
   });
 
   afterEach(() => {
@@ -1247,6 +1273,57 @@ describe('Step4Reveal', () => {
 
       const toast = screen.getByTestId('toast');
       expect(toast).not.toHaveClass('step4-toast--paywall');
+    });
+  });
+
+  // --- Analytics events ---
+
+  describe('analytics events', () => {
+    it('fires COPY_RESULT when copy button is clicked (paid user)', async () => {
+      setLicenseUnlocked();
+      mockClipboard();
+
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('copy-button'));
+      });
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('copy_result');
+    });
+
+    it('fires SAVE_RECIPE when save button is clicked (paid user)', async () => {
+      setLicenseUnlocked();
+
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('save-button'));
+      });
+
+      expect(mockTrackEvent).toHaveBeenCalledWith('save_recipe');
+    });
+
+    it('does not fire COPY_RESULT or SAVE_RECIPE for free users (paywall)', async () => {
+      setLicenseLocked();
+
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('copy-button'));
+      });
+
+      expect(mockTrackEvent).not.toHaveBeenCalledWith('copy_result');
+      expect(mockTrackEvent).not.toHaveBeenCalledWith('save_recipe');
     });
   });
 });
