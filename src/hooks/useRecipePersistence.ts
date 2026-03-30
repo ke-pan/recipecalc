@@ -1,10 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Recipe } from '../lib/calc/types.js';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface PersistedData {
   version: 1;
   step: number;
@@ -12,119 +8,70 @@ export interface PersistedData {
 }
 
 export interface UseRecipePersistenceReturn {
-  /** Restored data (null if nothing saved or data is corrupt) */
   savedData: PersistedData | null;
-  /** Save current state (debounced 500ms) */
   save: (step: number, recipe: Recipe) => void;
-  /** Clear saved data */
   clear: () => void;
-  /** Mark resume as handled (user chose continue or start fresh) */
   dismiss: () => void;
-  /** Whether to show the resume banner */
   showResume: boolean;
 }
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
 
 const STORAGE_KEY = 'recipecalc_current';
 const DEBOUNCE_MS = 500;
 const CURRENT_VERSION = 1;
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function isLocalStorageAvailable(): boolean {
+/** Safely run a localStorage operation, returning undefined on failure. */
+function safeStorage<T>(fn: () => T): T | undefined {
   try {
-    const testKey = '__recipecalc_test__';
-    localStorage.setItem(testKey, '1');
-    localStorage.removeItem(testKey);
-    return true;
+    return fn();
   } catch {
-    return false;
+    return undefined;
   }
+}
+
+function isValidPersistedData(data: unknown): data is PersistedData {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Record<string, unknown>;
+  return (
+    d.version === CURRENT_VERSION &&
+    typeof d.step === 'number' &&
+    typeof d.recipe === 'object' &&
+    d.recipe !== null &&
+    typeof (d.recipe as Record<string, unknown>).name === 'string'
+  );
 }
 
 function readPersistedData(): PersistedData | null {
-  if (!isLocalStorageAvailable()) return null;
+  const raw = safeStorage(() => localStorage.getItem(STORAGE_KEY));
+  if (!raw) return null;
 
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+  const parsed = safeStorage(() => JSON.parse(raw));
+  if (isValidPersistedData(parsed)) return parsed;
 
-    const parsed = JSON.parse(raw);
-
-    // Validate structure
-    if (
-      parsed &&
-      typeof parsed === 'object' &&
-      parsed.version === CURRENT_VERSION &&
-      typeof parsed.step === 'number' &&
-      parsed.recipe &&
-      typeof parsed.recipe === 'object' &&
-      typeof parsed.recipe.name === 'string'
-    ) {
-      return parsed as PersistedData;
-    }
-
-    // Invalid structure — clean up
-    localStorage.removeItem(STORAGE_KEY);
-    return null;
-  } catch {
-    // Corrupt JSON — clean up
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // localStorage might be totally broken — ignore
-    }
-    return null;
-  }
+  safeStorage(() => localStorage.removeItem(STORAGE_KEY));
+  return null;
 }
 
 function writePersistedData(data: PersistedData): void {
-  if (!isLocalStorageAvailable()) return;
-
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // Quota exceeded or write failure — silently ignore
-  }
+  safeStorage(() => localStorage.setItem(STORAGE_KEY, JSON.stringify(data)));
 }
 
 function clearPersistedData(): void {
-  if (!isLocalStorageAvailable()) return;
-
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Ignore
-  }
+  safeStorage(() => localStorage.removeItem(STORAGE_KEY));
 }
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
 
 export function useRecipePersistence(): UseRecipePersistenceReturn {
   const [savedData] = useState<PersistedData | null>(() => readPersistedData());
   const [dismissed, setDismissed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Clean up debounce timer on unmount
   useEffect(() => {
     return () => {
-      if (timerRef.current !== null) {
-        clearTimeout(timerRef.current);
-      }
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
     };
   }, []);
 
   const save = useCallback((step: number, recipe: Recipe) => {
-    if (timerRef.current !== null) {
-      clearTimeout(timerRef.current);
-    }
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       writePersistedData({ version: CURRENT_VERSION, step, recipe });
       timerRef.current = null;
@@ -139,9 +86,7 @@ export function useRecipePersistence(): UseRecipePersistenceReturn {
     clearPersistedData();
   }, []);
 
-  const dismiss = useCallback(() => {
-    setDismissed(true);
-  }, []);
+  const dismiss = useCallback(() => setDismissed(true), []);
 
   const showResume = savedData !== null && !dismissed;
 

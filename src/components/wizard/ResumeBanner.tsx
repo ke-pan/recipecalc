@@ -1,17 +1,16 @@
-import type React from 'react';
 import './resume-banner.css';
 
-export interface ResumeBannerProps {
+interface ResumeBannerProps {
   recipeName: string;
   onContinue: () => void;
   onStartFresh: () => void;
 }
 
-export const ResumeBanner: React.FC<ResumeBannerProps> = ({
+export function ResumeBanner({
   recipeName,
   onContinue,
   onStartFresh,
-}) => {
+}: ResumeBannerProps) {
   return (
     <div className="resume-banner" role="status">
       <span className="resume-banner__text">
@@ -35,4 +34,4 @@ export const ResumeBanner: React.FC<ResumeBannerProps> = ({
       </div>
     </div>
   );
-};
+}

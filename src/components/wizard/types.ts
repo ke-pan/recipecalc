@@ -1,16 +1,4 @@
-/**
- * Wizard state management types.
- *
- * The wizard has 4 steps:
- *   1. Recipe info
- *   2. Ingredients
- *   3. Labor & overhead
- *   4. Reveal (cost breakdown + pricing)
- */
-
 import type { Recipe, Ingredient, LaborAndOverhead } from '../../lib/calc/types';
-
-export const STEP_COUNT = 4;
 
 export const STEP_LABELS = [
   'Recipe Info',
@@ -18,6 +6,8 @@ export const STEP_LABELS = [
   'Labor & Overhead',
   'Your True Cost',
 ] as const;
+
+export const STEP_COUNT = STEP_LABELS.length;
 
 export type StepDirection = 'forward' | 'backward';
 

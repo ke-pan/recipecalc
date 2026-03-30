@@ -33,11 +33,6 @@ export const COUNT_TO_EACH: Record<string, number> = {
   dozen: 12,
 };
 
-/** All weight units */
 export const WEIGHT_UNITS = Object.keys(WEIGHT_TO_GRAMS);
-
-/** All volume units */
 export const VOLUME_UNITS = Object.keys(VOLUME_TO_ML);
-
-/** All count units */
 export const COUNT_UNITS = Object.keys(COUNT_TO_EACH);

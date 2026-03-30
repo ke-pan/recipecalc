@@ -1,11 +1,6 @@
 /**
  * Unit conversion engine for RecipeCalc.
  *
- * Supports:
- * - Same-category conversion (weight↔weight, volume↔volume, count↔count)
- * - Cross-category conversion (weight↔volume) using ingredient density data
- *
- * Design decisions:
  * - Unit input is case-insensitive ('Cup' === 'cup' === 'CUP')
  * - Zero amount always returns 0
  * - Negative amount throws a RangeError
@@ -20,119 +15,91 @@ import {
   WEIGHT_UNITS,
   VOLUME_UNITS,
   COUNT_UNITS,
-} from './conversion-factors';
-import { getDensity } from './density-data';
-import type { Unit, UnitCategory } from './types';
+} from './conversion-factors.js';
+import { getDensity } from './density-data.js';
+import type { UnitCategory } from './types.js';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+/** Lookup table: category -> conversion factors to base unit. */
+const FACTOR_TABLE: Record<UnitCategory, Record<string, number>> = {
+  weight: WEIGHT_TO_GRAMS,
+  volume: VOLUME_TO_ML,
+  count: COUNT_TO_EACH,
+};
 
-/** Normalise user-supplied unit string to canonical lowercase form. */
+/** Lookup table: category -> list of supported units. */
+const UNIT_LIST: Record<UnitCategory, string[]> = {
+  weight: WEIGHT_UNITS,
+  volume: VOLUME_UNITS,
+  count: COUNT_UNITS,
+};
+
 function normalizeUnit(unit: string): string {
   return unit.toLowerCase().trim();
 }
 
-/**
- * Return the category a unit belongs to.
- * Throws RangeError for unknown units.
- */
-export function getUnitCategory(unit: string): UnitCategory {
+/** Return the category if the unit is known, or undefined otherwise. */
+function findUnitCategory(unit: string): UnitCategory | undefined {
   const u = normalizeUnit(unit);
   if (u in WEIGHT_TO_GRAMS) return 'weight';
   if (u in VOLUME_TO_ML) return 'volume';
   if (u in COUNT_TO_EACH) return 'count';
-  throw new RangeError(`Unknown unit: "${unit}"`);
+  return undefined;
 }
 
-/**
- * Return every unit in the same category as the given unit.
- * Throws RangeError for unknown units.
- */
+/** Return the category a unit belongs to. Throws RangeError for unknown units. */
+export function getUnitCategory(unit: string): UnitCategory {
+  const category = findUnitCategory(unit);
+  if (!category) throw new RangeError(`Unknown unit: "${unit}"`);
+  return category;
+}
+
+/** Return every unit in the same category as the given unit. */
 export function getCompatibleUnits(unit: string): string[] {
-  const category = getUnitCategory(unit);
-  switch (category) {
-    case 'weight':
-      return [...WEIGHT_UNITS];
-    case 'volume':
-      return [...VOLUME_UNITS];
-    case 'count':
-      return [...COUNT_UNITS];
-  }
+  return [...UNIT_LIST[getUnitCategory(unit)]];
 }
 
 /**
  * Check whether a conversion is possible.
- * - Same-category conversions are always possible.
- * - Cross-category (weight↔volume) requires a known ingredientId.
- * - Cross-category involving count is never possible.
+ * Same-category is always possible. Cross-category (weight<->volume)
+ * requires a known ingredientId. Count cannot cross-convert.
  */
 export function canConvert(
   fromUnit: string,
   toUnit: string,
   ingredientId?: string,
 ): boolean {
-  try {
-    const fromCat = getUnitCategory(fromUnit);
-    const toCat = getUnitCategory(toUnit);
-
-    if (fromCat === toCat) return true;
-
-    // Cross-category: only weight↔volume is supported (not count↔anything)
-    if (fromCat === 'count' || toCat === 'count') return false;
-
-    if (!ingredientId) return false;
-    return getDensity(ingredientId) !== undefined;
-  } catch {
-    return false;
-  }
+  const fromCat = findUnitCategory(fromUnit);
+  const toCat = findUnitCategory(toUnit);
+  if (!fromCat || !toCat) return false;
+  if (fromCat === toCat) return true;
+  if (fromCat === 'count' || toCat === 'count') return false;
+  if (!ingredientId) return false;
+  return getDensity(ingredientId) !== undefined;
 }
-
-// ---------------------------------------------------------------------------
-// Rounding
-// ---------------------------------------------------------------------------
 
 /**
- * Round the result to a sensible number of decimal places.
- * - Weight values: 1 decimal place
- * - Volume values: 2 decimal places
- * - Count values:  2 decimal places
+ * Round to a sensible number of decimal places for the target unit category.
+ * Weight: 1 decimal place. Volume/count: 2 decimal places.
  */
 function roundResult(value: number, toUnit: string): number {
-  const cat = getUnitCategory(toUnit);
-  const decimals = cat === 'weight' ? 1 : 2;
-  return Math.round(value * 10 ** decimals) / 10 ** decimals;
+  const factor = getUnitCategory(toUnit) === 'weight' ? 10 : 100;
+  return Math.round(value * factor) / factor;
 }
-
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------
-
-function validateAmount(amount: number): void {
-  if (amount < 0) {
-    throw new RangeError(`Amount must be non-negative, got ${amount}`);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Same-category conversion
-// ---------------------------------------------------------------------------
 
 /**
  * Convert an amount between two units of the same category.
  *
- * @param amount   - The numeric quantity to convert (must be >= 0)
- * @param fromUnit - Source unit (case-insensitive)
- * @param toUnit   - Target unit (case-insensitive)
- * @returns The converted amount, rounded appropriately
  * @throws RangeError if amount is negative or units are unknown/incompatible
  */
 export function convert(amount: number, fromUnit: string, toUnit: string): number {
-  validateAmount(amount);
+  if (amount < 0) {
+    throw new RangeError(`Amount must be non-negative, got ${amount}`);
+  }
   if (amount === 0) return 0;
 
   const from = normalizeUnit(fromUnit);
   const to = normalizeUnit(toUnit);
+  if (from === to) return amount;
 
   const fromCat = getUnitCategory(from);
   const toCat = getUnitCategory(to);
@@ -140,48 +107,21 @@ export function convert(amount: number, fromUnit: string, toUnit: string): numbe
   if (fromCat !== toCat) {
     throw new RangeError(
       `Cannot convert between different categories without ingredient data. ` +
-        `Use convertCrossCategory() for ${fromCat}→${toCat} conversion.`,
+        `Use convertCrossCategory() for ${fromCat}->${toCat} conversion.`,
     );
   }
 
-  // Same unit — no-op
-  if (from === to) return amount;
-
-  let baseAmount: number;
-  let result: number;
-
-  switch (fromCat) {
-    case 'weight':
-      baseAmount = amount * WEIGHT_TO_GRAMS[from];
-      result = baseAmount / WEIGHT_TO_GRAMS[to];
-      break;
-    case 'volume':
-      baseAmount = amount * VOLUME_TO_ML[from];
-      result = baseAmount / VOLUME_TO_ML[to];
-      break;
-    case 'count':
-      baseAmount = amount * COUNT_TO_EACH[from];
-      result = baseAmount / COUNT_TO_EACH[to];
-      break;
-  }
-
+  const factors = FACTOR_TABLE[fromCat];
+  const baseAmount = amount * factors[from];
+  const result = baseAmount / factors[to];
   return roundResult(result, to);
 }
 
-// ---------------------------------------------------------------------------
-// Cross-category conversion
-// ---------------------------------------------------------------------------
-
 /**
- * Convert between different unit categories (weight↔volume) using ingredient density.
+ * Convert between different unit categories (weight<->volume) using ingredient density.
  *
- * @param amount       - Numeric quantity (must be >= 0)
- * @param fromUnit     - Source unit (case-insensitive)
- * @param toUnit       - Target unit (case-insensitive)
- * @param ingredientId - Identifier matching an entry in the density table
- * @returns The converted amount, or null if the ingredient is not in the density table
- * @throws RangeError if amount is negative, units are unknown, or cross-category
- *         involves count units
+ * Returns null if the ingredient is not in the density table.
+ * @throws RangeError if amount is negative, units are unknown, or count is involved
  */
 export function convertCrossCategory(
   amount: number,
@@ -189,7 +129,9 @@ export function convertCrossCategory(
   toUnit: string,
   ingredientId: string,
 ): number | null {
-  validateAmount(amount);
+  if (amount < 0) {
+    throw new RangeError(`Amount must be non-negative, got ${amount}`);
+  }
   if (amount === 0) return 0;
 
   const from = normalizeUnit(fromUnit);
@@ -198,47 +140,31 @@ export function convertCrossCategory(
   const fromCat = getUnitCategory(from);
   const toCat = getUnitCategory(to);
 
-  // If same category, delegate to the simpler function
   if (fromCat === toCat) {
     return convert(amount, from, to);
   }
 
-  // Cross-category involving count is not meaningful
   if (fromCat === 'count' || toCat === 'count') {
     throw new RangeError(
-      `Cannot convert between count and ${fromCat === 'count' ? toCat : fromCat}. ` +
+      `Cannot convert between ${fromCat} and ${toCat}. ` +
         `Count units are not interchangeable with weight or volume.`,
     );
   }
 
-  // Look up density
-  const density = getDensity(ingredientId);
-  if (!density) return null;
+  const entry = getDensity(ingredientId);
+  if (!entry) return null;
 
-  const { g_per_ml } = density.density;
+  const { g_per_ml } = entry.density;
 
-  // Strategy: convert source → base unit of its category → grams → ml → target base → target
-  let grams: number;
+  // Convert to grams as the intermediate base
+  const grams = fromCat === 'weight'
+    ? amount * WEIGHT_TO_GRAMS[from]
+    : amount * VOLUME_TO_ML[from] * g_per_ml;
 
-  if (fromCat === 'weight') {
-    // Convert from weight unit → grams
-    grams = amount * WEIGHT_TO_GRAMS[from];
-  } else {
-    // fromCat === 'volume': convert volume → ml → grams
-    const ml = amount * VOLUME_TO_ML[from];
-    grams = ml * g_per_ml;
-  }
-
-  let result: number;
-
-  if (toCat === 'weight') {
-    // Convert grams → target weight unit
-    result = grams / WEIGHT_TO_GRAMS[to];
-  } else {
-    // toCat === 'volume': grams → ml → target volume unit
-    const ml = grams / g_per_ml;
-    result = ml / VOLUME_TO_ML[to];
-  }
+  // Convert from grams to the target unit
+  const result = toCat === 'weight'
+    ? grams / WEIGHT_TO_GRAMS[to]
+    : grams / g_per_ml / VOLUME_TO_ML[to];
 
   return roundResult(result, to);
 }

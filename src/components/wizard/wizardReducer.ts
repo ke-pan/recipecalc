@@ -1,11 +1,27 @@
+import type { Recipe } from '../../lib/calc/types';
 import type { WizardState, WizardAction } from './types';
 import { STEP_COUNT, DEFAULT_RECIPE } from './types';
+
+function freshRecipe(): Recipe {
+  return {
+    ...DEFAULT_RECIPE,
+    ingredients: [],
+    laborAndOverhead: { ...DEFAULT_RECIPE.laborAndOverhead },
+  };
+}
+
+function withStepCompletion(stepsCompleted: boolean[], step: number, value: boolean): boolean[] {
+  if (stepsCompleted[step] === value) return stepsCompleted;
+  const next = [...stepsCompleted];
+  next[step] = value;
+  return next;
+}
 
 export const initialWizardState: WizardState = {
   currentStep: 0,
   direction: 'forward',
   stepsCompleted: Array(STEP_COUNT).fill(false),
-  recipe: { ...DEFAULT_RECIPE, laborAndOverhead: { ...DEFAULT_RECIPE.laborAndOverhead } },
+  recipe: freshRecipe(),
 };
 
 export function wizardReducer(
@@ -47,17 +63,11 @@ export function wizardReducer(
       };
     }
 
-    case 'MARK_STEP_COMPLETED': {
-      const completed = [...state.stepsCompleted];
-      completed[action.step] = true;
-      return { ...state, stepsCompleted: completed };
-    }
+    case 'MARK_STEP_COMPLETED':
+      return { ...state, stepsCompleted: withStepCompletion(state.stepsCompleted, action.step, true) };
 
-    case 'MARK_STEP_INCOMPLETE': {
-      const completed = [...state.stepsCompleted];
-      completed[action.step] = false;
-      return { ...state, stepsCompleted: completed };
-    }
+    case 'MARK_STEP_INCOMPLETE':
+      return { ...state, stepsCompleted: withStepCompletion(state.stepsCompleted, action.step, false) };
 
     case 'UPDATE_RECIPE_INFO': {
       return {
@@ -98,9 +108,12 @@ export function wizardReducer(
       };
     }
 
-    case 'RESET': {
-      return { ...initialWizardState, recipe: { ...DEFAULT_RECIPE, laborAndOverhead: { ...DEFAULT_RECIPE.laborAndOverhead } } };
-    }
+    case 'RESET':
+      return {
+        ...initialWizardState,
+        stepsCompleted: Array(STEP_COUNT).fill(false) as boolean[],
+        recipe: freshRecipe(),
+      };
 
     default:
       return state;

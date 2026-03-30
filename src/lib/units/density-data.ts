@@ -11,7 +11,7 @@
  * g_per_ml is derived as g_per_cup / 236.588 unless an independent source exists.
  */
 
-import type { IngredientDensity } from './types';
+import type { IngredientDensity } from './types.js';
 
 export const DENSITY_TABLE: IngredientDensity[] = [
   {

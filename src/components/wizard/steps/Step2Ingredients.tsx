@@ -1,32 +1,24 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import type { Ingredient } from '../../../lib/calc/types';
-import type { Recipe } from '../../../lib/calc/types';
-import { COMMON_INGREDIENTS } from '../../../data/common-ingredients';
-import type { CommonIngredient } from '../../../data/common-ingredients';
+import type { Ingredient, Recipe } from '../../../lib/calc/types.js';
+import { COMMON_INGREDIENTS } from '../../../data/common-ingredients.js';
+import type { CommonIngredient } from '../../../data/common-ingredients.js';
 import {
   getCompatibleUnits,
   canConvert,
   convert,
   convertCrossCategory,
   getUnitCategory,
-} from '../../../lib/units/converter';
-import { calculateIngredientCost, roundCents } from '../../../lib/calc/pricing';
-import { WEIGHT_UNITS, VOLUME_UNITS, COUNT_UNITS } from '../../../lib/units/conversion-factors';
+} from '../../../lib/units/converter.js';
+import { calculateIngredientCost, roundCents } from '../../../lib/calc/pricing.js';
+import { formatCurrency } from '../../../lib/format.js';
+import { WEIGHT_UNITS, VOLUME_UNITS, COUNT_UNITS } from '../../../lib/units/conversion-factors.js';
 import './step2.css';
-
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
 
 interface Step2Props {
   recipe: Recipe;
   onIngredientsChange: (ingredients: Ingredient[]) => void;
   onValidChange: (valid: boolean) => void;
 }
-
-// ---------------------------------------------------------------------------
-// Form state for adding/editing an ingredient
-// ---------------------------------------------------------------------------
 
 interface IngredientForm {
   name: string;
@@ -52,14 +44,30 @@ const EMPTY_FORM: IngredientForm = {
   showWaste: false,
 };
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+const ALL_UNITS = [...WEIGHT_UNITS, ...VOLUME_UNITS, ...COUNT_UNITS];
 
 /** Get all units that can convert to/from the given unit, including cross-category if ingredient supports it */
 function getAvailableUnits(unit: string, ingredientId?: string): string[] {
-  const allUnits = [...WEIGHT_UNITS, ...VOLUME_UNITS, ...COUNT_UNITS];
-  return allUnits.filter((u) => canConvert(unit, u, ingredientId));
+  return ALL_UNITS.filter((u) => canConvert(unit, u, ingredientId));
+}
+
+/** Convert usedAmount to purchaseUnit. Returns null if conversion fails. */
+function convertUsedToPurchaseUnit(
+  usedAmount: number,
+  usedUnit: string,
+  purchaseUnit: string,
+  ingredientId: string,
+): number | null {
+  if (usedUnit === purchaseUnit) return usedAmount;
+
+  try {
+    if (getUnitCategory(usedUnit) === getUnitCategory(purchaseUnit)) {
+      return convert(usedAmount, usedUnit, purchaseUnit);
+    }
+    return convertCrossCategory(usedAmount, usedUnit, purchaseUnit, ingredientId);
+  } catch {
+    return null;
+  }
 }
 
 /** Calculate the cost preview for the form state */
@@ -77,22 +85,10 @@ function calculateFormCost(form: IngredientForm): number | null {
     return null;
   }
 
-  // Convert usedAmount to the same unit as purchaseUnit
-  let convertedUsed = usedAmount;
-  if (form.usedUnit !== form.purchaseUnit) {
-    try {
-      const sameCat = getUnitCategory(form.usedUnit) === getUnitCategory(form.purchaseUnit);
-      if (sameCat) {
-        convertedUsed = convert(usedAmount, form.usedUnit, form.purchaseUnit);
-      } else {
-        const cross = convertCrossCategory(usedAmount, form.usedUnit, form.purchaseUnit, form.ingredientId);
-        if (cross === null) return null;
-        convertedUsed = cross;
-      }
-    } catch {
-      return null;
-    }
-  }
+  const convertedUsed = convertUsedToPurchaseUnit(
+    usedAmount, form.usedUnit, form.purchaseUnit, form.ingredientId,
+  );
+  if (convertedUsed === null) return null;
 
   try {
     return calculateIngredientCost({
@@ -102,7 +98,7 @@ function calculateFormCost(form: IngredientForm): number | null {
       purchaseUnit: form.purchaseUnit,
       purchasePrice,
       usedAmount: convertedUsed,
-      usedUnit: form.purchaseUnit, // Already converted
+      usedUnit: form.purchaseUnit,
       wastePercent,
     });
   } catch {
@@ -131,36 +127,20 @@ function generateId(): string {
 
 /** Build an Ingredient from form data */
 function formToIngredient(form: IngredientForm, existingId?: string): Ingredient {
-  const purchaseAmount = parseFloat(form.purchaseAmount);
-  const purchasePrice = parseFloat(form.purchasePrice);
   const usedAmount = parseFloat(form.usedAmount);
-  const wastePercent = parseFloat(form.wastePercent) || 0;
-
-  // Convert usedAmount to same unit as purchaseUnit for storage
-  let convertedUsed = usedAmount;
-  if (form.usedUnit !== form.purchaseUnit) {
-    try {
-      const sameCat = getUnitCategory(form.usedUnit) === getUnitCategory(form.purchaseUnit);
-      if (sameCat) {
-        convertedUsed = convert(usedAmount, form.usedUnit, form.purchaseUnit);
-      } else {
-        const cross = convertCrossCategory(usedAmount, form.usedUnit, form.purchaseUnit, form.ingredientId);
-        if (cross !== null) convertedUsed = cross;
-      }
-    } catch {
-      // Fall through — keep original amount
-    }
-  }
+  const convertedUsed = convertUsedToPurchaseUnit(
+    usedAmount, form.usedUnit, form.purchaseUnit, form.ingredientId,
+  ) ?? usedAmount;
 
   return {
     id: existingId || generateId(),
     name: form.name.trim(),
-    purchaseAmount,
+    purchaseAmount: parseFloat(form.purchaseAmount),
     purchaseUnit: form.purchaseUnit,
-    purchasePrice,
+    purchasePrice: parseFloat(form.purchasePrice),
     usedAmount: convertedUsed,
-    usedUnit: form.purchaseUnit, // Stored in same unit as purchase
-    wastePercent,
+    usedUnit: form.purchaseUnit,
+    wastePercent: parseFloat(form.wastePercent) || 0,
   };
 }
 
@@ -184,8 +164,8 @@ function ingredientToForm(ing: Ingredient): IngredientForm {
   };
 }
 
-/** Calculate cost for a stored ingredient */
-function getIngredientCost(ing: Ingredient): number {
+/** Calculate cost for a stored ingredient, returning 0 on invalid data */
+function safeIngredientCost(ing: Ingredient): number {
   try {
     return calculateIngredientCost(ing);
   } catch {
@@ -193,19 +173,9 @@ function getIngredientCost(ing: Ingredient): number {
   }
 }
 
-/** Format a dollar amount */
-function formatCurrency(amount: number): string {
-  return `$${amount.toFixed(2)}`;
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export default function Step2Ingredients({ recipe, onIngredientsChange, onValidChange }: Step2Props) {
   const ingredients = recipe.ingredients;
 
-  // Form visibility & state
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<IngredientForm>(EMPTY_FORM);
@@ -216,14 +186,9 @@ export default function Step2Ingredients({ recipe, onIngredientsChange, onValidC
   const nameInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<HTMLUListElement>(null);
 
-  // Notify parent about validity (non-empty list)
   useEffect(() => {
     onValidChange(ingredients.length > 0);
   }, [ingredients.length, onValidChange]);
-
-  // ---------------------------------------------------------------------------
-  // Autocomplete filtering
-  // ---------------------------------------------------------------------------
 
   const filteredSuggestions = useMemo(() => {
     const query = form.name.trim().toLowerCase();
@@ -233,81 +198,48 @@ export default function Step2Ingredients({ recipe, onIngredientsChange, onValidC
     ).slice(0, 8);
   }, [form.name]);
 
-  // ---------------------------------------------------------------------------
-  // Unit dropdowns — what units are available?
-  // ---------------------------------------------------------------------------
-
-  const purchaseUnits = useMemo(() => {
-    return [...WEIGHT_UNITS, ...VOLUME_UNITS, ...COUNT_UNITS];
-  }, []);
-
   const usedUnits = useMemo(() => {
-    // If ingredient ID is known, include cross-category options
     if (form.ingredientId) {
       return getAvailableUnits(form.purchaseUnit, form.ingredientId);
     }
-    // Otherwise, only same-category
     try {
       return getCompatibleUnits(form.purchaseUnit);
     } catch {
-      return [...WEIGHT_UNITS, ...VOLUME_UNITS, ...COUNT_UNITS];
+      return ALL_UNITS;
     }
   }, [form.purchaseUnit, form.ingredientId]);
-
-  // ---------------------------------------------------------------------------
-  // Cost preview
-  // ---------------------------------------------------------------------------
 
   const costPreview = useMemo(() => calculateFormCost(form), [form]);
   const canAdd = isFormComplete(form);
 
-  // ---------------------------------------------------------------------------
-  // Subtotal
-  // ---------------------------------------------------------------------------
-
   const subtotal = useMemo(() => {
-    return roundCents(ingredients.reduce((sum, ing) => sum + getIngredientCost(ing), 0));
+    return roundCents(ingredients.reduce((sum, ing) => sum + safeIngredientCost(ing), 0));
   }, [ingredients]);
 
-  // ---------------------------------------------------------------------------
-  // Handlers
-  // ---------------------------------------------------------------------------
-
-  const handleOpenAdd = useCallback(() => {
+  function resetForm(open: boolean): void {
     setForm(EMPTY_FORM);
     setEditingId(null);
-    setShowForm(true);
+    setShowForm(open);
     setAutocompleteOpen(false);
     setActiveIndex(-1);
-  }, []);
+  }
 
-  const handleCancel = useCallback(() => {
-    setShowForm(false);
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setAutocompleteOpen(false);
-    setActiveIndex(-1);
-  }, []);
+  const handleOpenAdd = useCallback(() => resetForm(true), []);
+  const handleCancel = useCallback(() => resetForm(false), []);
 
   const handleAdd = useCallback(() => {
     if (!canAdd) return;
 
     if (editingId) {
-      // Update existing
       const updated = ingredients.map((ing) =>
         ing.id === editingId ? formToIngredient(form, editingId) : ing,
       );
       onIngredientsChange(updated);
     } else {
-      // Add new
-      const newIngredient = formToIngredient(form);
-      onIngredientsChange([...ingredients, newIngredient]);
+      onIngredientsChange([...ingredients, formToIngredient(form)]);
     }
 
-    setShowForm(false);
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setAutocompleteOpen(false);
+    resetForm(false);
   }, [canAdd, editingId, form, ingredients, onIngredientsChange]);
 
   const handleEdit = useCallback((ing: Ingredient) => {
@@ -374,20 +306,21 @@ export default function Step2Ingredients({ recipe, onIngredientsChange, onValidC
 
   const handlePurchaseUnitChange = useCallback((unit: string) => {
     setForm((prev) => {
-      // If the used unit is no longer compatible, reset to same as purchase
-      const compatible = prev.ingredientId
-        ? getAvailableUnits(unit, prev.ingredientId)
-        : (() => { try { return getCompatibleUnits(unit); } catch { return [unit]; } })();
+      let compatible: string[];
+      if (prev.ingredientId) {
+        compatible = getAvailableUnits(unit, prev.ingredientId);
+      } else {
+        try {
+          compatible = getCompatibleUnits(unit);
+        } catch {
+          compatible = [unit];
+        }
+      }
 
       const usedUnit = compatible.includes(prev.usedUnit) ? prev.usedUnit : unit;
-
       return { ...prev, purchaseUnit: unit, usedUnit };
     });
   }, []);
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
 
   return (
     <div className="step2" data-testid="step2-ingredients">
@@ -402,7 +335,7 @@ export default function Step2Ingredients({ recipe, onIngredientsChange, onValidC
       {ingredients.length > 0 ? (
         <div className="step2__list" role="list" aria-label="Ingredient list">
           {ingredients.map((ing) => {
-            const cost = getIngredientCost(ing);
+            const cost = safeIngredientCost(ing);
             return (
               <div key={ing.id} className="step2__item" role="listitem">
                 <div className="step2__item-info">
@@ -534,7 +467,7 @@ export default function Step2Ingredients({ recipe, onIngredientsChange, onValidC
                   value={form.purchaseUnit}
                   onChange={(e) => handlePurchaseUnitChange(e.target.value)}
                 >
-                  {purchaseUnits.map((u) => (
+                  {ALL_UNITS.map((u) => (
                     <option key={u} value={u}>
                       {u}
                     </option>

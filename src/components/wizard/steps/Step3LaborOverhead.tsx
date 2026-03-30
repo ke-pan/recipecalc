@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { Recipe, LaborAndOverhead } from '../../../lib/calc/types';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import type { Recipe, LaborAndOverhead } from '../../../lib/calc/types.js';
+import { formatCurrency } from '../../../lib/format.js';
 import './step3.css';
 
 interface Step3Props {
@@ -8,9 +9,10 @@ interface Step3Props {
   onValidChange: (valid: boolean) => void;
 }
 
-/** Format a number as USD with 2 decimal places */
-function formatUsd(n: number): string {
-  return `$${n.toFixed(2)}`;
+/** Parse string to number, treating empty/whitespace as 0. */
+function parseField(val: string): number {
+  const trimmed = val.trim();
+  return trimmed === '' ? 0 : Number(trimmed);
 }
 
 export default function Step3LaborOverhead({
@@ -26,71 +28,57 @@ export default function Step3LaborOverhead({
   const [overhead, setOverhead] = useState(String(laborAndOverhead.overhead));
   const [platformFees, setPlatformFees] = useState(String(laborAndOverhead.platformFees));
 
-  // Track which fields have been touched for inline error display
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const markTouched = useCallback((field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
   }, []);
 
-  // Parse to number, empty string -> 0
-  const parse = (val: string): number => {
-    if (val.trim() === '') return 0;
-    return Number(val);
-  };
+  const parsedHourlyRate = parseField(hourlyRate);
+  const parsedLaborTime = parseField(laborTime);
+  const parsedPackaging = parseField(packaging);
+  const parsedOverhead = parseField(overhead);
+  const parsedPlatformFees = parseField(platformFees);
 
-  const hourlyRateNum = parse(hourlyRate);
-  const laborTimeNum = parse(laborTime);
-  const packagingNum = parse(packaging);
-  const overheadNum = parse(overhead);
-  const platformFeesNum = parse(platformFees);
+  const allParsed = [parsedHourlyRate, parsedLaborTime, parsedPackaging, parsedOverhead, parsedPlatformFees];
+  const isValid = allParsed.every((v) => !isNaN(v) && v >= 0);
 
-  // Validation: all fields must be >= 0
-  const errors: Record<string, string> = {};
-  if (touched.hourlyRate && hourlyRateNum < 0) errors.hourlyRate = 'Must be 0 or greater';
-  if (touched.laborTime && laborTimeNum < 0) errors.laborTime = 'Must be 0 or greater';
-  if (touched.packaging && packagingNum < 0) errors.packaging = 'Must be 0 or greater';
-  if (touched.overhead && overheadNum < 0) errors.overhead = 'Must be 0 or greater';
-  if (touched.platformFees && platformFeesNum < 0) errors.platformFees = 'Must be 0 or greater';
+  const errors = useMemo(() => {
+    const result: Record<string, string> = {};
+    const fields: Record<string, number> = {
+      hourlyRate: parsedHourlyRate,
+      laborTime: parsedLaborTime,
+      packaging: parsedPackaging,
+      overhead: parsedOverhead,
+      platformFees: parsedPlatformFees,
+    };
+    for (const [field, value] of Object.entries(fields)) {
+      if (touched[field] && value < 0) {
+        result[field] = 'Must be 0 or greater';
+      }
+    }
+    return result;
+  }, [parsedHourlyRate, parsedLaborTime, parsedPackaging, parsedOverhead, parsedPlatformFees, touched]);
 
-  const hasNegative =
-    hourlyRateNum < 0 ||
-    laborTimeNum < 0 ||
-    packagingNum < 0 ||
-    overheadNum < 0 ||
-    platformFeesNum < 0;
-
-  const hasNaN =
-    isNaN(hourlyRateNum) ||
-    isNaN(laborTimeNum) ||
-    isNaN(packagingNum) ||
-    isNaN(overheadNum) ||
-    isNaN(platformFeesNum);
-
-  const isValid = !hasNegative && !hasNaN;
-
-  // Labor cost = hourlyRate * laborTime
   const laborCost =
-    !isNaN(hourlyRateNum) && !isNaN(laborTimeNum) && hourlyRateNum >= 0 && laborTimeNum >= 0
-      ? hourlyRateNum * laborTimeNum
+    isValid && parsedHourlyRate >= 0 && parsedLaborTime >= 0
+      ? parsedHourlyRate * parsedLaborTime
       : 0;
 
-  // Notify parent of validity changes
   useEffect(() => {
     onValidChange(isValid);
   }, [isValid, onValidChange]);
 
-  // Notify parent of data changes
   useEffect(() => {
     if (isValid) {
       onUpdate({
-        hourlyRate: hourlyRateNum,
-        packaging: packagingNum,
-        overhead: overheadNum,
-        platformFees: platformFeesNum,
+        hourlyRate: parsedHourlyRate,
+        packaging: parsedPackaging,
+        overhead: parsedOverhead,
+        platformFees: parsedPlatformFees,
       });
     }
-  }, [hourlyRateNum, packagingNum, overheadNum, platformFeesNum, isValid, onUpdate]);
+  }, [parsedHourlyRate, parsedPackaging, parsedOverhead, parsedPlatformFees, isValid, onUpdate]);
 
   return (
     <div className="step3" data-testid="step3-labor-overhead">
@@ -156,7 +144,7 @@ export default function Step3LaborOverhead({
       {/* Labor Cost Preview */}
       <div className="step3__labor-preview" data-testid="labor-cost-preview">
         <span className="step3__labor-preview-label">Labor cost</span>
-        <span className="step3__labor-preview-value">{formatUsd(laborCost)}</span>
+        <span className="step3__labor-preview-value">{formatCurrency(laborCost)}</span>
       </div>
 
       {/* Packaging */}

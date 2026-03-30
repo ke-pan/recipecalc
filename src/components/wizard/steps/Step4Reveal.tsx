@@ -14,6 +14,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { calculateTotalCosts, calculatePricing } from '../../../lib/calc/pricing.js';
 import type { Recipe, CostBreakdown, PricingResult } from '../../../lib/calc/types.js';
+import { formatCurrency } from '../../../lib/format.js';
 import './step4.css';
 
 export interface Step4Props {
@@ -37,19 +38,23 @@ function lerp(start: number, end: number, t: number): number {
   return start + (end - start) * Math.min(1, Math.max(0, t));
 }
 
-/** Format a number as currency ($X.XX). */
-function formatCurrency(value: number): string {
-  return `$${value.toFixed(2)}`;
-}
-
 /** Check if user prefers reduced motion. */
 function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined') return false;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-export default function Step4Reveal({ recipe, onStartNew, onGoToStep }: Step4Props) {
-  // Calculate costs
+const PHASE_ORDER: Record<RevealPhase, number> = {
+  skeleton: 0,
+  'left-box': 1,
+  'right-box': 2,
+  'count-up': 3,
+  'gap-bar': 4,
+  recommended: 5,
+  complete: 6,
+};
+
+export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
   const costs: CostBreakdown = calculateTotalCosts(recipe);
 
   // Slider state
@@ -66,9 +71,6 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep }: Step4Pro
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animFrameRef = useRef<number | null>(null);
-
-  // Determine if the full reveal sequence is done (for accessibility)
-  const isComplete = phase === 'complete';
 
   // Run the reveal animation sequence on mount
   useEffect(() => {
@@ -122,11 +124,9 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep }: Step4Pro
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Count-up animation (runs when phase reaches 'count-up')
+  // Count-up animation (runs when phase reaches 'count-up' or later)
   useEffect(() => {
-    if (phase !== 'count-up' && phase !== 'gap-bar' && phase !== 'recommended' && phase !== 'complete') {
-      return;
-    }
+    if (PHASE_ORDER[phase] < PHASE_ORDER['count-up']) return;
 
     if (countUpProgress >= 1) return;
 
@@ -157,7 +157,6 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep }: Step4Pro
     };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cleanup toast timer on unmount
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -197,20 +196,11 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep }: Step4Pro
     [],
   );
 
-  // Determine which elements are visible based on animation phase
-  const phaseIndex = [
-    'skeleton',
-    'left-box',
-    'right-box',
-    'count-up',
-    'gap-bar',
-    'recommended',
-    'complete',
-  ].indexOf(phase);
+  const phaseIndex = PHASE_ORDER[phase];
 
+  const showSkeleton = phaseIndex < 1;
   const showLeftBox = phaseIndex >= 1;
   const showRightBox = phaseIndex >= 2;
-  const showSkeleton = phaseIndex < 1;
   const showGapBar = phaseIndex >= 4;
   const showRecommended = phaseIndex >= 5;
 

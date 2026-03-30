@@ -101,6 +101,8 @@
   max-width: var(--max-content-width);
   margin-inline: auto;
   padding: var(--space-lg) var(--space-md);
+  /* Extra bottom padding so content isn't hidden behind the fixed footer on mobile */
+  padding-bottom: calc(var(--space-3xl) + var(--space-xl));
   overflow: hidden;
 }
 
@@ -110,21 +112,6 @@
 
 .wizard-content {
   flex: 1;
-}
-
-.wizard-content__step-title {
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: var(--space-md);
-}
-
-.wizard-content__placeholder {
-  font-family: var(--font-body);
-  font-size: var(--text-base);
-  color: var(--text-muted);
-  padding: var(--space-xl) 0;
 }
 
 /* Step 4 reveal background */
@@ -181,11 +168,6 @@
   margin-inline: auto;
 }
 
-/* Add bottom padding to main so content isn't hidden behind fixed footer on mobile */
-.wizard-main {
-  padding-bottom: calc(var(--space-3xl) + var(--space-xl));
-}
-
 /* --------------------------------------------------------------------------
    Buttons
    -------------------------------------------------------------------------- */
@@ -231,10 +213,6 @@
 .wizard-btn--next:disabled {
   opacity: 0.5;
   cursor: default;
-}
-
-.wizard-btn--reveal {
-  background-color: var(--confidence);
 }
 
 /* --------------------------------------------------------------------------

@@ -1,6 +1,5 @@
 import { useReducer, useCallback, useRef, useEffect, useState } from 'react';
-import { STEP_COUNT, STEP_LABELS } from './types';
-import type { WizardAction } from './types';
+import { STEP_COUNT } from './types';
 import { wizardReducer, initialWizardState } from './wizardReducer';
 import StepIndicator from './StepIndicator';
 import { ResumeBanner } from './ResumeBanner';
@@ -11,12 +10,8 @@ import Step4Reveal from './steps/Step4Reveal';
 import { useRecipePersistence } from '../../hooks/useRecipePersistence';
 import './wizard.css';
 
-/** CTA button labels per step */
-const CTA_LABELS: Record<number, string> = {
-  0: 'Next',
-  1: 'Next',
-  2: 'See your true cost \u2192',
-};
+/** CTA button labels per step (step 3 has its own actions, so no entry needed) */
+const CTA_LABELS = ['Next', 'Next', 'See your true cost \u2192'] as const;
 
 export default function WizardShell() {
   const [state, dispatch] = useReducer(wizardReducer, initialWizardState);
@@ -41,7 +36,6 @@ export default function WizardShell() {
   // Animation state
   const [isAnimating, setIsAnimating] = useState(false);
   const [displayStep, setDisplayStep] = useState(currentStep);
-  const contentRef = useRef<HTMLDivElement>(null);
   const prevStepRef = useRef(currentStep);
 
   useEffect(() => {
@@ -68,7 +62,6 @@ export default function WizardShell() {
     return () => clearTimeout(timer);
   }, [currentStep]);
 
-  // Step validity change handler
   const handleValidChange = useCallback((step: number) => (valid: boolean) => {
     setStepValid(prev => {
       if (prev[step] === valid) return prev;
@@ -76,11 +69,7 @@ export default function WizardShell() {
       next[step] = valid;
       return next;
     });
-    if (valid) {
-      dispatch({ type: 'MARK_STEP_COMPLETED', step });
-    } else {
-      dispatch({ type: 'MARK_STEP_INCOMPLETE', step });
-    }
+    dispatch({ type: valid ? 'MARK_STEP_COMPLETED' : 'MARK_STEP_INCOMPLETE', step });
   }, []);
 
   const handleNext = useCallback(() => {
@@ -90,13 +79,9 @@ export default function WizardShell() {
     dispatch({ type: 'NEXT_STEP' });
   }, [currentStep, stepValid]);
 
-  const handleBack = useCallback(() => {
-    dispatch({ type: 'PREV_STEP' });
-  }, []);
-
-  const handleGoToStep = useCallback((step: number) => {
-    dispatch({ type: 'GO_TO_STEP', step });
-  }, []);
+  // dispatch is stable from useReducer, so no useCallback needed for simple forwards
+  const handleBack = () => dispatch({ type: 'PREV_STEP' });
+  const handleGoToStep = (step: number) => dispatch({ type: 'GO_TO_STEP', step });
 
   const handleStartNew = useCallback(() => {
     clear();
@@ -106,21 +91,17 @@ export default function WizardShell() {
     prevStepRef.current = 0;
   }, [clear]);
 
-  // Resume handlers
   const handleResumeContinue = useCallback(() => {
-    if (savedData) {
-      dispatch({ type: 'RESTORE_STATE', step: savedData.step, recipe: savedData.recipe });
-      // Mark all prior steps as valid so navigation works
-      setStepValid(prev => {
-        const next = [...prev];
-        for (let i = 0; i < savedData.step; i++) next[i] = true;
-        return next;
-      });
-      setDisplayStep(savedData.step);
-      prevStepRef.current = savedData.step;
-      // Force re-mount of step components so local state re-initializes from restored props
-      setRestoreKey(k => k + 1);
-    }
+    if (!savedData) { dismiss(); return; }
+    dispatch({ type: 'RESTORE_STATE', step: savedData.step, recipe: savedData.recipe });
+    setStepValid(prev => {
+      const next = [...prev];
+      for (let i = 0; i < savedData.step; i++) next[i] = true;
+      return next;
+    });
+    setDisplayStep(savedData.step);
+    prevStepRef.current = savedData.step;
+    setRestoreKey(k => k + 1);
     dismiss();
   }, [savedData, dismiss]);
 
@@ -138,17 +119,15 @@ export default function WizardShell() {
     [handleNext],
   );
 
-  const isLastStep = currentStep === STEP_COUNT - 1;
   const isFirstStep = currentStep === 0;
 
-  const getAnimationClass = () => {
+  function animationClass(): string {
     if (!isAnimating) return 'wizard-content--enter';
     return direction === 'forward'
       ? 'wizard-content--exit-left'
       : 'wizard-content--exit-right';
-  };
+  }
 
-  // Render the current step component
   const renderStep = () => {
     switch (displayStep) {
       case 0:
@@ -190,7 +169,6 @@ export default function WizardShell() {
 
   return (
     <div className="wizard" onKeyDown={handleKeyDown}>
-      {/* Resume banner */}
       {showResume && savedData && (
         <ResumeBanner
           recipeName={savedData.recipe.name || 'Untitled recipe'}
@@ -199,7 +177,6 @@ export default function WizardShell() {
         />
       )}
 
-      {/* Persistent header */}
       <header className="wizard-header">
         <h1 className="wizard-header__title">RecipeCalc</h1>
         <StepIndicator
@@ -209,11 +186,9 @@ export default function WizardShell() {
         />
       </header>
 
-      {/* Content area */}
       <main className="wizard-main">
         <div
-          ref={contentRef}
-          className={`wizard-content ${getAnimationClass()}`}
+          className={`wizard-content ${animationClass()}`}
           data-step={displayStep}
           key={`${displayStep}-${restoreKey}`}
         >
@@ -221,7 +196,7 @@ export default function WizardShell() {
         </div>
       </main>
 
-      {/* Bottom CTA area — hidden on Step 4 (reveal has its own actions) */}
+      {/* Step 4 (reveal) has its own actions, so hide the shared footer */}
       {displayStep < 3 && (
         <footer className="wizard-footer">
           <div className="wizard-footer__inner">
@@ -237,12 +212,12 @@ export default function WizardShell() {
             )}
             <button
               type="button"
-              className={`wizard-btn wizard-btn--next`}
+              className="wizard-btn wizard-btn--next"
               onClick={handleNext}
               disabled={!stepValid[currentStep]}
               aria-label="Go to next step"
             >
-              {CTA_LABELS[currentStep] || 'Next'}
+              {CTA_LABELS[currentStep]}
             </button>
           </div>
         </footer>

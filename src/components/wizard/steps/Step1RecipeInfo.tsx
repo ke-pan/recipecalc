@@ -1,12 +1,12 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import type { Recipe } from '../../../lib/calc/types';
+import { useState, useEffect, useRef } from 'react';
+import type { Recipe } from '../../../lib/calc/types.js';
 import './step1.css';
+
+type Step1Fields = Pick<Recipe, 'name' | 'quantity' | 'quantityUnit' | 'batchTimeHours'>;
 
 interface Step1Props {
   recipe: Recipe;
-  onUpdate: (
-    data: Partial<Pick<Recipe, 'name' | 'quantity' | 'quantityUnit' | 'batchTimeHours'>>,
-  ) => void;
+  onUpdate: (data: Partial<Step1Fields>) => void;
   onValidChange: (valid: boolean) => void;
 }
 
@@ -16,11 +16,7 @@ interface FieldErrors {
   batchTimeHours?: string;
 }
 
-function validate(
-  name: string,
-  quantity: number,
-  batchTimeHours: number,
-): FieldErrors {
+function validate(name: string, quantity: number, batchTimeHours: number): FieldErrors {
   const errors: FieldErrors = {};
   if (!name.trim()) {
     errors.name = 'Please name your recipe.';
@@ -46,71 +42,49 @@ export default function Step1RecipeInfo({
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState(false);
 
-  // Track whether onValidChange has been called to avoid stale closure issues
   const lastValidRef = useRef<boolean | null>(null);
 
-  // Run validation and notify parent whenever values change
   useEffect(() => {
     const fieldErrors = validate(name, quantity, batchTimeHours);
     const isValid = Object.keys(fieldErrors).length === 0;
 
-    // Only notify if validity changed
     if (lastValidRef.current !== isValid) {
       lastValidRef.current = isValid;
       onValidChange(isValid);
     }
 
-    // Update inline errors only after the user has attempted to submit / blurred
     if (touched) {
       setErrors(fieldErrors);
     }
   }, [name, quantity, batchTimeHours, touched, onValidChange]);
 
-  const handleNameChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      setName(value);
-      onUpdate({ name: value });
-    },
-    [onUpdate],
-  );
+  function handleText(
+    field: 'name' | 'quantityUnit',
+    setter: (v: string) => void,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ): void {
+    setter(e.target.value);
+    onUpdate({ [field]: e.target.value });
+  }
 
-  const handleQuantityChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.valueAsNumber || 0;
-      setQuantity(value);
-      onUpdate({ quantity: value });
-    },
-    [onUpdate],
-  );
+  function handleNumber(
+    field: 'quantity' | 'batchTimeHours',
+    setter: (v: number) => void,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ): void {
+    const value = e.target.valueAsNumber || 0;
+    setter(value);
+    onUpdate({ [field]: value });
+  }
 
-  const handleUnitChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      setQuantityUnit(value);
-      onUpdate({ quantityUnit: value });
-    },
-    [onUpdate],
-  );
-
-  const handleTimeChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.valueAsNumber || 0;
-      setBatchTimeHours(value);
-      onUpdate({ batchTimeHours: value });
-    },
-    [onUpdate],
-  );
-
-  const handleBlur = useCallback(() => {
+  function handleBlur(): void {
     setTouched(true);
-  }, []);
+  }
 
   return (
     <div className="step1">
       <h2 className="step1__title">What did you make?</h2>
 
-      {/* Recipe name */}
       <div className="step1__field">
         <label className="step1__label" htmlFor="recipe-name">
           Recipe name
@@ -121,7 +95,7 @@ export default function Step1RecipeInfo({
           type="text"
           placeholder="e.g. Chocolate Chip Cookies"
           value={name}
-          onChange={handleNameChange}
+          onChange={(e) => handleText('name', setName, e)}
           onBlur={handleBlur}
           autoComplete="off"
         />
@@ -132,7 +106,6 @@ export default function Step1RecipeInfo({
         )}
       </div>
 
-      {/* Quantity + Unit */}
       <div className="step1__row">
         <div className="step1__field">
           <label className="step1__label" htmlFor="recipe-quantity">
@@ -146,7 +119,7 @@ export default function Step1RecipeInfo({
             min={1}
             step={1}
             value={quantity || ''}
-            onChange={handleQuantityChange}
+            onChange={(e) => handleNumber('quantity', setQuantity, e)}
             onBlur={handleBlur}
           />
           {errors.quantity && (
@@ -166,14 +139,13 @@ export default function Step1RecipeInfo({
             type="text"
             placeholder="cookies"
             value={quantityUnit}
-            onChange={handleUnitChange}
+            onChange={(e) => handleText('quantityUnit', setQuantityUnit, e)}
             onBlur={handleBlur}
             autoComplete="off"
           />
         </div>
       </div>
 
-      {/* Batch time */}
       <div className="step1__field">
         <label className="step1__label" htmlFor="recipe-time">
           Batch time (hours)
@@ -186,7 +158,7 @@ export default function Step1RecipeInfo({
           min={0}
           step={0.25}
           value={batchTimeHours || ''}
-          onChange={handleTimeChange}
+          onChange={(e) => handleNumber('batchTimeHours', setBatchTimeHours, e)}
           onBlur={handleBlur}
         />
         {errors.batchTimeHours && (

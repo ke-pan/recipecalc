@@ -1,8 +1,7 @@
 /**
  * RecipeCalc cost calculation module.
  *
- * Re-exports all types and functions for convenient imports:
- *   import { calculatePricing, type Recipe } from '@/lib/calc';
+ * Re-exports all types and functions for convenient imports.
  */
 
 export type {
