@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RecipesPage from '../RecipesPage';
@@ -21,11 +21,25 @@ vi.mock('../../../services/lemonsqueezy.js', () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Mock analytics
+// ---------------------------------------------------------------------------
+
+const mockTrackEvent = vi.fn();
+
+vi.mock('../../../lib/analytics.js', () => ({
+  trackEvent: (...args: unknown[]) => mockTrackEvent(...args),
+  EVENTS: {
+    EXPORT_JSON: 'export_json',
+  },
+}));
+
+// ---------------------------------------------------------------------------
 // localStorage mock
 // ---------------------------------------------------------------------------
 
 const LICENSE_KEY = 'recipecalc_license';
 const RECIPES_KEY = 'recipecalc_recipes';
+const CURRENT_KEY = 'recipecalc_current';
 
 let store: Record<string, string> = {};
 
@@ -104,6 +118,7 @@ beforeEach(() => {
   store = {};
   mockActivate.mockReset();
   mockValidate.mockReset();
+  mockTrackEvent.mockReset();
   Object.defineProperty(globalThis, 'localStorage', {
     value: mockLocalStorage,
     writable: true,
@@ -372,6 +387,298 @@ describe('RecipesPage', () => {
 
     await waitFor(() => {
       expect(mockValidate).toHaveBeenCalledWith('test-key-123', 'instance-abc');
+    });
+  });
+
+  // ---- Export all ----
+
+  it('renders Export all button when licensed', () => {
+    setupUnlocked();
+    render(<RecipesPage />);
+    expect(screen.getByTestId('export-btn')).toBeInTheDocument();
+    expect(screen.getByText('Export all')).toBeInTheDocument();
+  });
+
+  it('export triggers download with correct filename pattern', () => {
+    const mockCreateObjectURL = vi.fn(() => 'blob:mock-url');
+    const mockRevokeObjectURL = vi.fn();
+    globalThis.URL.createObjectURL = mockCreateObjectURL;
+    globalThis.URL.revokeObjectURL = mockRevokeObjectURL;
+
+    // Track anchor elements created by export (don't mock appendChild/removeChild
+    // since React also uses them for rendering)
+    let capturedAnchor: HTMLAnchorElement | null = null;
+    const clickSpy = vi.fn();
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string, options?: ElementCreationOptions) => {
+      const el = origCreateElement(tag, options);
+      if (tag === 'a') {
+        capturedAnchor = el as HTMLAnchorElement;
+        (el as HTMLAnchorElement).click = clickSpy;
+      }
+      return el;
+    });
+
+    setupUnlocked([makeSavedRecipe()]);
+    render(<RecipesPage />);
+
+    fireEvent.click(screen.getByTestId('export-btn'));
+
+    expect(mockCreateObjectURL).toHaveBeenCalledTimes(1);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(mockRevokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+
+    // Check the anchor element had the right download attribute
+    const dateStr = new Date().toISOString().slice(0, 10);
+    expect(capturedAnchor!.download).toBe(`recipecalc-backup-${dateStr}.json`);
+  });
+
+  it('export does not include license key in JSON', () => {
+    setupUnlocked([makeSavedRecipe()]);
+
+    // The exported data comes from readRecipes() which reads recipecalc_recipes
+    // from localStorage. Verify the stored recipes don't contain license key.
+    const recipesRaw = store[RECIPES_KEY];
+    const recipes = JSON.parse(recipesRaw);
+    expect(recipes[0]).not.toHaveProperty('licenseKey');
+    expect(recipesRaw).not.toContain('test-key-123');
+
+    // Also verify the license key exists in a DIFFERENT storage key
+    expect(store[LICENSE_KEY]).toContain('test-key-123');
+  });
+
+  it('export tracks EXPORT_JSON analytics event', () => {
+    globalThis.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+    globalThis.URL.revokeObjectURL = vi.fn();
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string, options?: ElementCreationOptions) => {
+      const el = origCreateElement(tag, options);
+      if (tag === 'a') (el as HTMLAnchorElement).click = vi.fn();
+      return el;
+    });
+
+    setupUnlocked([makeSavedRecipe()]);
+    render(<RecipesPage />);
+
+    fireEvent.click(screen.getByTestId('export-btn'));
+    expect(mockTrackEvent).toHaveBeenCalledWith('export_json');
+  });
+
+  // ---- Import ----
+
+  it('renders Import button when licensed', () => {
+    setupUnlocked();
+    render(<RecipesPage />);
+    expect(screen.getByTestId('import-btn')).toBeInTheDocument();
+    expect(screen.getByText('Import')).toBeInTheDocument();
+  });
+
+  it('renders hidden file input with .json accept', () => {
+    setupUnlocked();
+    render(<RecipesPage />);
+    const input = screen.getByTestId('import-file-input') as HTMLInputElement;
+    expect(input.type).toBe('file');
+    expect(input.accept).toBe('.json');
+  });
+
+  it('import shows success toast with counts', async () => {
+    const newRecipe = makeSavedRecipe({ id: 'new-import-1' });
+    const importJSON = JSON.stringify([newRecipe]);
+
+    setupUnlocked([makeSavedRecipe({ id: 'existing-1' })]);
+    render(<RecipesPage />);
+
+    const input = screen.getByTestId('import-file-input') as HTMLInputElement;
+    const file = new File([importJSON], 'backup.json', { type: 'application/json' });
+
+    await userEvent.upload(input, file);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('import-toast')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Imported 1 new recipe, 0 skipped (already exist)')).toBeInTheDocument();
+  });
+
+  it('import skips recipes that already exist (merge by id)', async () => {
+    const existing = makeSavedRecipe({ id: 'existing-1' });
+    const importJSON = JSON.stringify([existing]);
+
+    setupUnlocked([existing]);
+    render(<RecipesPage />);
+
+    const input = screen.getByTestId('import-file-input') as HTMLInputElement;
+    const file = new File([importJSON], 'backup.json', { type: 'application/json' });
+
+    await userEvent.upload(input, file);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('import-toast')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Imported 0 new recipes, 1 skipped (already exist)')).toBeInTheDocument();
+  });
+
+  it('import shows error toast for invalid JSON', async () => {
+    setupUnlocked();
+    render(<RecipesPage />);
+
+    const input = screen.getByTestId('import-file-input') as HTMLInputElement;
+    const file = new File(['not valid json {{{'], 'bad.json', { type: 'application/json' });
+
+    await userEvent.upload(input, file);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('import-toast')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Invalid JSON file')).toBeInTheDocument();
+  });
+
+  it('toast can be dismissed', async () => {
+    const newRecipe = makeSavedRecipe({ id: 'dismissible-1' });
+    const importJSON = JSON.stringify([newRecipe]);
+
+    setupUnlocked();
+    render(<RecipesPage />);
+
+    const input = screen.getByTestId('import-file-input') as HTMLInputElement;
+    const file = new File([importJSON], 'backup.json', { type: 'application/json' });
+
+    await userEvent.upload(input, file);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('import-toast')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText('Dismiss'));
+    expect(screen.queryByTestId('import-toast')).not.toBeInTheDocument();
+  });
+
+  // ---- Draft conflict detection ----
+
+  it('edit navigates directly when no draft exists', () => {
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...originalLocation, href: '' },
+    });
+
+    setupUnlocked([makeSavedRecipe({ id: 'no-draft-test' })]);
+    render(<RecipesPage />);
+
+    fireEvent.click(screen.getByText('Edit'));
+    expect(window.location.href).toBe('/calculator?edit=no-draft-test');
+
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: originalLocation,
+    });
+  });
+
+  it('edit shows confirm when draft with name exists', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...originalLocation, href: '' },
+    });
+
+    // Set up a draft in progress
+    store[CURRENT_KEY] = JSON.stringify({
+      version: 1,
+      step: 1,
+      recipe: { name: 'Draft Recipe', ingredients: [] },
+    });
+
+    setupUnlocked([makeSavedRecipe({ id: 'draft-test' })]);
+    render(<RecipesPage />);
+
+    fireEvent.click(screen.getByText('Edit'));
+    expect(confirmSpy).toHaveBeenCalledWith('You have unsaved changes. Load this recipe anyway?');
+    expect(window.location.href).toBe('/calculator?edit=draft-test');
+
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: originalLocation,
+    });
+  });
+
+  it('edit shows confirm when draft with ingredients exists', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...originalLocation, href: '' },
+    });
+
+    store[CURRENT_KEY] = JSON.stringify({
+      version: 1,
+      step: 2,
+      recipe: { name: '', ingredients: [{ id: '1', name: 'Flour' }] },
+    });
+
+    setupUnlocked([makeSavedRecipe({ id: 'ing-draft-test' })]);
+    render(<RecipesPage />);
+
+    fireEvent.click(screen.getByText('Edit'));
+    expect(confirmSpy).toHaveBeenCalledWith('You have unsaved changes. Load this recipe anyway?');
+
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: originalLocation,
+    });
+  });
+
+  it('cancel on draft conflict prevents navigation', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...originalLocation, href: '' },
+    });
+
+    store[CURRENT_KEY] = JSON.stringify({
+      version: 1,
+      step: 1,
+      recipe: { name: 'Unsaved Recipe', ingredients: [] },
+    });
+
+    setupUnlocked([makeSavedRecipe({ id: 'cancel-test' })]);
+    render(<RecipesPage />);
+
+    fireEvent.click(screen.getByText('Edit'));
+    // Should NOT navigate
+    expect(window.location.href).toBe('');
+
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: originalLocation,
+    });
+  });
+
+  it('no confirm shown when draft has empty name and no ingredients', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...originalLocation, href: '' },
+    });
+
+    store[CURRENT_KEY] = JSON.stringify({
+      version: 1,
+      step: 1,
+      recipe: { name: '', ingredients: [] },
+    });
+
+    setupUnlocked([makeSavedRecipe({ id: 'empty-draft-test' })]);
+    render(<RecipesPage />);
+
+    fireEvent.click(screen.getByText('Edit'));
+    // Should not have shown draft conflict dialog (delete confirm may fire for other clicks)
+    expect(confirmSpy).not.toHaveBeenCalledWith('You have unsaved changes. Load this recipe anyway?');
+    expect(window.location.href).toBe('/calculator?edit=empty-draft-test');
+
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: originalLocation,
     });
   });
 });

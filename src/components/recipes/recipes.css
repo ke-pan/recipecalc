@@ -43,14 +43,22 @@
 }
 
 /* --------------------------------------------------------------------------
-   Header
+   Header + Toolbar
    -------------------------------------------------------------------------- */
 
 .recipes__header {
   display: flex;
   align-items: baseline;
+  justify-content: space-between;
   gap: var(--space-md);
   margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+.recipes__header-left {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-md);
 }
 
 .recipes__title {
@@ -64,6 +72,67 @@
   font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-muted);
+}
+
+.recipes__toolbar {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.recipes__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Toast
+   -------------------------------------------------------------------------- */
+
+.recipes__toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  margin-bottom: var(--space-md);
+}
+
+.recipes__toast--success {
+  background: color-mix(in srgb, var(--confidence) 12%, var(--surface));
+  color: var(--confidence);
+  border: 1px solid color-mix(in srgb, var(--confidence) 30%, var(--surface));
+}
+
+.recipes__toast--error {
+  background: color-mix(in srgb, var(--caution) 12%, var(--surface));
+  color: var(--caution);
+  border: 1px solid color-mix(in srgb, var(--caution) 30%, var(--surface));
+}
+
+.recipes__toast-dismiss {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--text-lg);
+  color: inherit;
+  opacity: 0.6;
+  line-height: 1;
+  padding: 0;
+}
+
+.recipes__toast-dismiss:hover {
+  opacity: 1;
 }
 
 /* --------------------------------------------------------------------------
