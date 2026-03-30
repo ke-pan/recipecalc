@@ -24,6 +24,7 @@ import { calculateTotalCosts, calculatePricing } from '../../../lib/calc/pricing
 import type { Recipe, CostBreakdown, PricingResult } from '../../../lib/calc/types.js';
 import { formatCurrency } from '../../../lib/format.js';
 import { useLicense } from '../../../contexts/LicenseContext.js';
+import NudgeBanner from '../NudgeBanner.js';
 import './step4.css';
 
 export interface Step4Props {
@@ -63,7 +64,23 @@ const PHASE_ORDER: Record<RevealPhase, number> = {
   complete: 6,
 };
 
-export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
+/** Detect edge case: all hidden costs are zero. */
+function allHiddenCostsZero(recipe: Recipe): boolean {
+  const { hourlyRate, packaging, overhead, platformFees } = recipe.laborAndOverhead;
+  return hourlyRate === 0 && packaging === 0 && overhead === 0 && platformFees === 0;
+}
+
+/** Detect edge case: batch time is zero. */
+function batchTimeZero(recipe: Recipe): boolean {
+  return recipe.batchTimeHours === 0;
+}
+
+/** Detect edge case: ingredient cost >= true total cost. */
+function ingredientCostExceedsTrueTotal(costs: CostBreakdown): boolean {
+  return costs.ingredientCost >= costs.trueTotalCost;
+}
+
+export default function Step4Reveal({ recipe, onStartNew, onGoToStep }: Step4Props) {
   const { isUnlocked } = useLicense();
   const costs: CostBreakdown = calculateTotalCosts(recipe);
 
@@ -74,6 +91,19 @@ export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
     recipe.quantity,
     targetCostRatio,
   );
+
+  // Nudge dismissed state — each scenario independent
+  const [nudge1Dismissed, setNudge1Dismissed] = useState(false);
+  const [nudge2Dismissed, setNudge2Dismissed] = useState(false);
+  const [nudge3Dismissed, setNudge3Dismissed] = useState(false);
+  const [nudge4Dismissed, setNudge4Dismissed] = useState(false);
+
+  // Edge case detection
+  const showNudge1 = !nudge1Dismissed && allHiddenCostsZero(recipe);
+  const showNudge2 = !nudge2Dismissed && batchTimeZero(recipe);
+  const isVariantB = ingredientCostExceedsTrueTotal(costs);
+  const showNudge3 = !nudge3Dismissed && isVariantB;
+  const showNudge4 = !nudge4Dismissed && isUnlocked && pricing.recommendedPricePerUnit < 1.0;
 
   // Animation state
   const [phase, setPhase] = useState<RevealPhase>('skeleton');
@@ -230,6 +260,30 @@ export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
           Step 4a — THE REVEAL (always free)
           ================================================================ */}
       <section className="step4a" data-testid="step4a-reveal" aria-label="The Reveal">
+        {/* Edge case nudges (scenarios 1-3) */}
+        {showNudge1 && (
+          <NudgeBanner
+            message="Are you sure there are no labor or packaging costs? Most bakers have at least some."
+            onDismiss={() => setNudge1Dismissed(true)}
+            testId="nudge-all-hidden-zero"
+          />
+        )}
+        {showNudge2 && (
+          <NudgeBanner
+            message="A batch time of 0 means your time is free. Sure about that?"
+            onDismiss={() => setNudge2Dismissed(true)}
+            testId="nudge-batch-time-zero"
+          />
+        )}
+        {showNudge3 && (
+          <NudgeBanner
+            message="Your hidden costs are unusually low — double-check your labor and packaging?"
+            onDismiss={() => setNudge3Dismissed(true)}
+            cta={{ label: 'Revisit hidden costs \u2192', onClick: () => onGoToStep(2) }}
+            testId="nudge-low-hidden-costs"
+          />
+        )}
+
         {/* Cost comparison boxes */}
         <div className="step4-comparison" role="region" aria-label="Cost comparison">
           {showSkeleton ? (
@@ -246,7 +300,7 @@ export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
           ) : (
             <>
               <div
-                className={`step4-box ${showLeftBox ? 'step4-box--visible' : ''}`}
+                className={`step4-box ${showLeftBox ? 'step4-box--visible' : ''}${isVariantB ? ' step4-box--neutral' : ''}`}
                 data-testid="ingredient-cost-box"
               >
                 <div className="step4-box__label">Ingredients Only</div>
@@ -255,7 +309,7 @@ export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
                 </div>
               </div>
               <div
-                className={`step4-box ${showRightBox ? 'step4-box--visible' : ''}`}
+                className={`step4-box ${showRightBox ? 'step4-box--visible' : ''}${isVariantB ? ' step4-box--neutral' : ''}`}
                 data-testid="true-cost-box"
               >
                 <div className="step4-box__label">True Cost</div>
@@ -302,6 +356,15 @@ export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
       >
         {isUnlocked ? (
           <>
+            {/* Edge case nudge (scenario 4): recommended price < $1/unit */}
+            {showNudge4 && (
+              <NudgeBanner
+                message="This seems very low — consider whether your batch size is accurate."
+                onDismiss={() => setNudge4Dismissed(true)}
+                testId="nudge-low-price"
+              />
+            )}
+
             {/* Recommended price */}
             <div
               className={`step4-recommended ${showRecommended ? 'step4-recommended--visible' : ''}`}

@@ -623,4 +623,297 @@ describe('Step4Reveal', () => {
 
     expect(screen.getByTestId('step4a-cta')).toBeInTheDocument();
   });
+
+  // =======================================================================
+  // 17. Edge case nudges
+  // =======================================================================
+
+  describe('Nudge: all hidden costs = $0 (scenario 1)', () => {
+    function makeZeroHiddenCostsRecipe() {
+      return makeRecipe({
+        batchTimeHours: 0,
+        laborAndOverhead: {
+          hourlyRate: 0,
+          packaging: 0,
+          overhead: 0,
+          platformFees: 0,
+        },
+      });
+    }
+
+    it('shows nudge when all hidden costs are zero', () => {
+      render(
+        <Step4Reveal recipe={makeZeroHiddenCostsRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      const nudge = screen.getByTestId('nudge-all-hidden-zero');
+      expect(nudge).toBeInTheDocument();
+      expect(nudge).toHaveTextContent('Are you sure there are no labor or packaging costs?');
+    });
+
+    it('does not show nudge when at least one hidden cost is non-zero', () => {
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      expect(screen.queryByTestId('nudge-all-hidden-zero')).not.toBeInTheDocument();
+    });
+
+    it('can be dismissed', () => {
+      render(
+        <Step4Reveal recipe={makeZeroHiddenCostsRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      expect(screen.getByTestId('nudge-all-hidden-zero')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('nudge-all-hidden-zero-dismiss'));
+
+      expect(screen.queryByTestId('nudge-all-hidden-zero')).not.toBeInTheDocument();
+    });
+
+    it('is placed inside step 4a', () => {
+      render(
+        <Step4Reveal recipe={makeZeroHiddenCostsRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      const section4a = screen.getByTestId('step4a-reveal');
+      expect(section4a.querySelector('[data-testid="nudge-all-hidden-zero"]')).toBeInTheDocument();
+    });
+  });
+
+  describe('Nudge: batch time = 0 (scenario 2)', () => {
+    function makeZeroBatchTimeRecipe() {
+      return makeRecipe({
+        batchTimeHours: 0,
+      });
+    }
+
+    it('shows nudge when batch time is 0', () => {
+      render(
+        <Step4Reveal recipe={makeZeroBatchTimeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      const nudge = screen.getByTestId('nudge-batch-time-zero');
+      expect(nudge).toBeInTheDocument();
+      expect(nudge).toHaveTextContent('A batch time of 0 means your time is free');
+    });
+
+    it('does not show nudge when batch time is non-zero', () => {
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      expect(screen.queryByTestId('nudge-batch-time-zero')).not.toBeInTheDocument();
+    });
+
+    it('can be dismissed', () => {
+      render(
+        <Step4Reveal recipe={makeZeroBatchTimeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      fireEvent.click(screen.getByTestId('nudge-batch-time-zero-dismiss'));
+
+      expect(screen.queryByTestId('nudge-batch-time-zero')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Nudge: ingredient cost >= true cost — variant B (scenario 3)', () => {
+    function makeVariantBRecipe() {
+      // All hidden costs zero + batch time zero => ingredient cost = true cost
+      return makeRecipe({
+        batchTimeHours: 0,
+        laborAndOverhead: {
+          hourlyRate: 0,
+          packaging: 0,
+          overhead: 0,
+          platformFees: 0,
+        },
+      });
+    }
+
+    it('shows variant B nudge when ingredient cost >= true total cost', () => {
+      render(
+        <Step4Reveal recipe={makeVariantBRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      const nudge = screen.getByTestId('nudge-low-hidden-costs');
+      expect(nudge).toBeInTheDocument();
+      expect(nudge).toHaveTextContent('Your hidden costs are unusually low');
+    });
+
+    it('has a "Revisit hidden costs" CTA that calls onGoToStep(2)', () => {
+      render(
+        <Step4Reveal recipe={makeVariantBRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      const cta = screen.getByTestId('nudge-low-hidden-costs-cta');
+      expect(cta).toHaveTextContent('Revisit hidden costs');
+
+      fireEvent.click(cta);
+      expect(onGoToStep).toHaveBeenCalledWith(2);
+    });
+
+    it('applies neutral styling to cost comparison boxes', () => {
+      render(
+        <Step4Reveal recipe={makeVariantBRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      const ingredientBox = screen.getByTestId('ingredient-cost-box');
+      const trueCostBox = screen.getByTestId('true-cost-box');
+
+      expect(ingredientBox).toHaveClass('step4-box--neutral');
+      expect(trueCostBox).toHaveClass('step4-box--neutral');
+    });
+
+    it('does not apply neutral styling when hidden costs exist', () => {
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      const ingredientBox = screen.getByTestId('ingredient-cost-box');
+      const trueCostBox = screen.getByTestId('true-cost-box');
+
+      expect(ingredientBox).not.toHaveClass('step4-box--neutral');
+      expect(trueCostBox).not.toHaveClass('step4-box--neutral');
+    });
+
+    it('can be dismissed', () => {
+      render(
+        <Step4Reveal recipe={makeVariantBRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      fireEvent.click(screen.getByTestId('nudge-low-hidden-costs-dismiss'));
+
+      expect(screen.queryByTestId('nudge-low-hidden-costs')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Nudge: recommended price < $1/unit (scenario 4)', () => {
+    function makeLowPriceRecipe() {
+      // Very low total cost with many units -> price per unit < $1
+      // Total cost must be low enough that costPerUnit / 0.3 < 1.0
+      // costPerUnit < 0.3 => trueTotalCost / quantity < 0.3
+      // With quantity=24, trueTotalCost < 7.2
+      return makeRecipe({
+        batchTimeHours: 0,
+        ingredients: [
+          {
+            id: 'flour',
+            name: 'Flour',
+            purchaseAmount: 5,
+            purchaseUnit: 'lb',
+            purchasePrice: 2.00,
+            usedAmount: 1,
+            usedUnit: 'lb',
+            wastePercent: 0,
+          },
+        ],
+        laborAndOverhead: {
+          hourlyRate: 0,
+          packaging: 0,
+          overhead: 0,
+          platformFees: 0,
+        },
+      });
+    }
+
+    it('shows nudge when recommended price per unit < $1 (paid user)', () => {
+      setLicenseUnlocked();
+
+      render(
+        <Step4Reveal recipe={makeLowPriceRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      const nudge = screen.getByTestId('nudge-low-price');
+      expect(nudge).toBeInTheDocument();
+      expect(nudge).toHaveTextContent('This seems very low');
+    });
+
+    it('does not show nudge when license is locked', () => {
+      setLicenseLocked();
+
+      render(
+        <Step4Reveal recipe={makeLowPriceRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      expect(screen.queryByTestId('nudge-low-price')).not.toBeInTheDocument();
+    });
+
+    it('does not show nudge when price is >= $1/unit', () => {
+      render(
+        <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      expect(screen.queryByTestId('nudge-low-price')).not.toBeInTheDocument();
+    });
+
+    it('is placed inside step 4b', () => {
+      setLicenseUnlocked();
+
+      render(
+        <Step4Reveal recipe={makeLowPriceRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      const section4b = screen.getByTestId('step4b-pricing');
+      expect(section4b.querySelector('[data-testid="nudge-low-price"]')).toBeInTheDocument();
+    });
+
+    it('can be dismissed', () => {
+      setLicenseUnlocked();
+
+      render(
+        <Step4Reveal recipe={makeLowPriceRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      fireEvent.click(screen.getByTestId('nudge-low-price-dismiss'));
+
+      expect(screen.queryByTestId('nudge-low-price')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Nudge: all nudges are non-blocking', () => {
+    it('still shows cost comparison and gap bar when nudges are visible', () => {
+      const recipe = makeRecipe({
+        batchTimeHours: 0,
+        laborAndOverhead: {
+          hourlyRate: 0,
+          packaging: 0,
+          overhead: 0,
+          platformFees: 0,
+        },
+      });
+
+      render(
+        <Step4Reveal recipe={recipe} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+        { wrapper: Wrapper },
+      );
+
+      // Nudges are visible
+      expect(screen.getByTestId('nudge-all-hidden-zero')).toBeInTheDocument();
+      expect(screen.getByTestId('nudge-batch-time-zero')).toBeInTheDocument();
+
+      // Core reveal content is still accessible
+      expect(screen.getByTestId('ingredient-cost-box')).toBeInTheDocument();
+      expect(screen.getByTestId('true-cost-box')).toBeInTheDocument();
+      expect(screen.getByTestId('gap-bar')).toBeInTheDocument();
+      expect(screen.getByTestId('step4a-cta')).toBeInTheDocument();
+    });
+  });
 });
