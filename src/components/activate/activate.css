@@ -318,6 +318,33 @@
 }
 
 /* --------------------------------------------------------------------------
+   Responsive — 375px mobile
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 480px) {
+  .activate__card {
+    padding: var(--space-lg) var(--space-md);
+  }
+
+  .activate__title {
+    font-size: var(--text-xl);
+  }
+
+  .activate__input {
+    max-width: 100%;
+  }
+
+  .activate__error {
+    max-width: 100%;
+  }
+
+  .activate__btn {
+    width: 100%;
+    min-width: unset;
+  }
+}
+
+/* --------------------------------------------------------------------------
    Reduced motion
    -------------------------------------------------------------------------- */
 

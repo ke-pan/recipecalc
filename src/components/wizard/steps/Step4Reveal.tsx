@@ -482,6 +482,7 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep, editingRec
             <div
               className={`step4-recommended step4-recommended--visible blurred-price`}
               data-testid="recommended-section"
+              aria-hidden="true"
             >
               <h3 className="step4-recommended__heading">Recommended Selling Price</h3>
               <div className="step4-recommended__price" data-testid="recommended-price-unit">
@@ -497,9 +498,10 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep, editingRec
                 {Math.round(pricing.profitMargin * 100)}% profit margin
               </div>
             </div>
+            <span className="sr-only">Price hidden. Unlock to view.</span>
 
             {/* Target cost ratio slider — locked for free users */}
-            <div className="step4-slider locked-slider" data-testid="slider-section">
+            <div className="step4-slider locked-slider" data-testid="slider-section" aria-disabled="true">
               <div className="step4-slider__header">
                 <label htmlFor="cost-ratio-slider-locked" className="step4-slider__label">
                   Target cost ratio <span className="locked-slider__icon" aria-label="Locked">&#x1F512;</span>
@@ -517,6 +519,8 @@ export default function Step4Reveal({ recipe, onStartNew, onGoToStep, editingRec
                 step="0.01"
                 value={targetCostRatio}
                 disabled
+                aria-disabled="true"
+                aria-label="Target cost ratio slider — locked, unlock to adjust"
                 aria-valuemin={20}
                 aria-valuemax={50}
                 aria-valuenow={Math.round(targetCostRatio * 100)}

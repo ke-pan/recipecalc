@@ -162,32 +162,37 @@ function ActivateForm() {
         </button>
       </form>
 
-      {state.phase === 'error' && (
-        <div className="activate__error" role="alert" data-testid="error-message">
-          <span className="activate__error-icon" aria-hidden="true">&#x26A0;</span>
-          <span className="activate__error-text">
-            {ERROR_MESSAGES[state.reason]}
-            {' '}
-            <button
-              type="button"
-              onClick={handleRetry}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--accent)',
-                cursor: 'pointer',
-                fontFamily: 'var(--font-body)',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 600,
-                padding: 0,
-                textDecoration: 'underline',
-              }}
-            >
-              Try again
-            </button>
-          </span>
-        </div>
-      )}
+      <div aria-live="polite" data-testid="activate-status">
+        {isValidating && (
+          <span className="sr-only">Validating your license key...</span>
+        )}
+        {state.phase === 'error' && (
+          <div className="activate__error" role="alert" data-testid="error-message">
+            <span className="activate__error-icon" aria-hidden="true">&#x26A0;</span>
+            <span className="activate__error-text">
+              {ERROR_MESSAGES[state.reason]}
+              {' '}
+              <button
+                type="button"
+                onClick={handleRetry}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent)',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 600,
+                  padding: 0,
+                  textDecoration: 'underline',
+                }}
+              >
+                Try again
+              </button>
+            </span>
+          </div>
+        )}
+      </div>
     </>
   );
 }

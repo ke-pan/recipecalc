@@ -165,6 +165,19 @@ describe('PaywallCard', () => {
     expect(screen.getByTestId('paywall-card')).toHaveClass('paywall-card');
   });
 
+  // --- 5b. ARIA: role="region" and aria-label ---
+
+  it('has role="region" and aria-label="Unlock pricing"', () => {
+    render(
+      <PaywallCard checkoutUrl={TEST_CHECKOUT_URL} />,
+      { wrapper: Wrapper },
+    );
+
+    const card = screen.getByTestId('paywall-card');
+    expect(card).toHaveAttribute('role', 'region');
+    expect(card).toHaveAttribute('aria-label', 'Unlock pricing');
+  });
+
   // --- 6. Analytics events ---
 
   it('fires PAYWALL_VIEW when card enters viewport via IntersectionObserver', () => {
