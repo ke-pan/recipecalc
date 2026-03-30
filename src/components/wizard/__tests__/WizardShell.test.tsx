@@ -3,6 +3,15 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useEffect } from 'react';
 import WizardShell from '../WizardShell';
 
+// Mock the LemonSqueezy module so LicenseProvider (used inside WizardShell) can initialize
+vi.mock('../../../services/lemonsqueezy.js', () => ({
+  activateLicense: vi.fn(),
+  _env: {
+    get storeId() { return '12345'; },
+    get productId() { return '67890'; },
+  },
+}));
+
 // Mock step components — use useEffect to call onValidChange only once
 vi.mock('../steps/Step1RecipeInfo', () => ({
   default: ({ onValidChange }: { onValidChange: (v: boolean) => void }) => {

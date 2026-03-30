@@ -1,7 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import Step4Reveal from '../Step4Reveal';
+import { LicenseProvider } from '../../../../contexts/LicenseContext.js';
 import type { Recipe } from '../../../../lib/calc/types.js';
+
+// Mock the LemonSqueezy module so LicenseProvider can initialize
+vi.mock('../../../../services/lemonsqueezy.js', () => ({
+  activateLicense: vi.fn(),
+  _env: {
+    get storeId() { return '12345'; },
+    get productId() { return '67890'; },
+  },
+}));
 
 // --- Test fixture ---
 
@@ -53,6 +64,31 @@ function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
   };
 }
 
+// --- License helpers ---
+
+const VALID_LICENSE = JSON.stringify({
+  key: 'test-key-123',
+  instanceId: 'inst-456',
+  activatedAt: '2026-01-01T00:00:00Z',
+  storeId: '12345',
+  productId: '67890',
+});
+
+/** Set localStorage so LicenseProvider reads an active license (isUnlocked=true). */
+function setLicenseUnlocked() {
+  localStorage.setItem('recipecalc_license', VALID_LICENSE);
+}
+
+/** Clear localStorage so LicenseProvider reads no license (isUnlocked=false). */
+function setLicenseLocked() {
+  localStorage.removeItem('recipecalc_license');
+}
+
+/** Wrapper that provides LicenseProvider context. */
+function Wrapper({ children }: { children: ReactNode }) {
+  return <LicenseProvider>{children}</LicenseProvider>;
+}
+
 // --- Helpers ---
 
 function mockMatchMedia(matches: boolean) {
@@ -94,6 +130,7 @@ describe('Step4Reveal', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     mockMatchMedia(true); // Default: reduced motion ON (skip animations for most tests)
+    setLicenseUnlocked(); // Default: license active (isUnlocked=true) to preserve MVP behavior
     onStartNew.mockClear();
     onGoToStep.mockClear();
   });
@@ -107,6 +144,7 @@ describe('Step4Reveal', () => {
   it('renders the reveal container', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     expect(screen.getByTestId('step4-reveal')).toBeInTheDocument();
@@ -117,6 +155,7 @@ describe('Step4Reveal', () => {
   it('displays correct ingredient cost', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     // Ingredient cost: flour (4.99 * 2/5 * 1.05) = 2.0958 -> $2.10
@@ -130,6 +169,7 @@ describe('Step4Reveal', () => {
   it('displays correct true total cost', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     // True cost: ingredients($5.85) + labor(2*$20=$40) + packaging($5) + overhead($3) + platform($2) = $55.85
@@ -142,6 +182,7 @@ describe('Step4Reveal', () => {
   it('displays the hidden cost gap amount', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     // Gap = $55.85 - $5.85 = $50.00
@@ -152,6 +193,7 @@ describe('Step4Reveal', () => {
   it('shows gap bar with accessible label', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     const gapBar = screen.getByTestId('gap-bar');
@@ -163,6 +205,7 @@ describe('Step4Reveal', () => {
   it('displays recommended price per unit at default 30% cost ratio', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     // Cost per unit: $55.85 / 24 = $2.33 (rounded)
@@ -174,6 +217,7 @@ describe('Step4Reveal', () => {
   it('displays recommended price per batch', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     // $7.77 * 24 = $186.48
@@ -184,6 +228,7 @@ describe('Step4Reveal', () => {
   it('displays profit margin', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     // 1 - 0.3 = 0.7 = 70%
@@ -196,6 +241,7 @@ describe('Step4Reveal', () => {
   it('renders the slider at default 30%', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     const slider = screen.getByRole('slider');
@@ -206,6 +252,7 @@ describe('Step4Reveal', () => {
   it('updates pricing when slider is changed', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     const slider = screen.getByRole('slider');
@@ -226,6 +273,7 @@ describe('Step4Reveal', () => {
 
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     const copyBtn = screen.getByTestId('copy-button');
@@ -251,6 +299,7 @@ describe('Step4Reveal', () => {
 
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     await act(async () => {
@@ -271,6 +320,7 @@ describe('Step4Reveal', () => {
   it('calls onStartNew when "Start a new recipe" is clicked', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     fireEvent.click(screen.getByTestId('start-new-button'));
@@ -284,6 +334,7 @@ describe('Step4Reveal', () => {
 
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     expect(screen.getByTestId('skeleton-left')).toBeInTheDocument();
@@ -295,6 +346,7 @@ describe('Step4Reveal', () => {
 
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     // At 400ms, skeleton should be replaced with boxes
@@ -311,6 +363,7 @@ describe('Step4Reveal', () => {
 
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     // At 750ms (400 + 200 + 150), right box should appear
@@ -326,6 +379,7 @@ describe('Step4Reveal', () => {
 
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     // At 1450ms, gap bar should slide in
@@ -343,6 +397,7 @@ describe('Step4Reveal', () => {
 
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     // Everything should be visible immediately
@@ -361,6 +416,7 @@ describe('Step4Reveal', () => {
   it('has accessible labels on action buttons', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     expect(
@@ -374,6 +430,7 @@ describe('Step4Reveal', () => {
   it('has a labeled slider with correct aria attributes', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     const slider = screen.getByRole('slider');
@@ -390,6 +447,7 @@ describe('Step4Reveal', () => {
 
     render(
       <Step4Reveal recipe={recipe} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     expect(screen.getByTestId('ingredient-cost-box')).toHaveTextContent('$0.00');
@@ -402,6 +460,7 @@ describe('Step4Reveal', () => {
   it('clamps cost ratio to valid range at boundaries', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     const slider = screen.getByRole('slider');
@@ -426,6 +485,7 @@ describe('Step4Reveal', () => {
   it('has an accessible region label for cost comparison', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     expect(screen.getByRole('region', { name: 'Cost comparison' })).toBeInTheDocument();
@@ -436,9 +496,131 @@ describe('Step4Reveal', () => {
   it('displays the quantity unit in recommended section', () => {
     render(
       <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
     );
 
     // "cookies" -> "cookie" (singular)
     expect(screen.getByTestId('recommended-section')).toHaveTextContent('per cookie');
+  });
+
+  // --- 15. Step 4a/4b structure ---
+
+  it('renders step 4a and 4b sections', () => {
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.getByTestId('step4a-reveal')).toBeInTheDocument();
+    expect(screen.getByTestId('step4b-pricing')).toBeInTheDocument();
+  });
+
+  it('renders the "What can I do about this?" CTA in step 4a', () => {
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    const cta = screen.getByTestId('step4a-cta');
+    expect(cta).toBeInTheDocument();
+    expect(cta).toHaveTextContent('What can I do about this?');
+  });
+
+  it('keeps cost comparison and gap bar inside step 4a', () => {
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    const section4a = screen.getByTestId('step4a-reveal');
+    expect(section4a.querySelector('[data-testid="ingredient-cost-box"]')).toBeInTheDocument();
+    expect(section4a.querySelector('[data-testid="true-cost-box"]')).toBeInTheDocument();
+    expect(section4a.querySelector('[data-testid="gap-bar"]')).toBeInTheDocument();
+  });
+
+  it('keeps pricing and slider inside step 4b when unlocked', () => {
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    const section4b = screen.getByTestId('step4b-pricing');
+    expect(section4b.querySelector('[data-testid="recommended-section"]')).toBeInTheDocument();
+    expect(section4b.querySelector('[data-testid="slider-section"]')).toBeInTheDocument();
+    expect(section4b.querySelector('[data-testid="copy-button"]')).toBeInTheDocument();
+  });
+
+  it('"Start a new recipe" is in shared actions (accessible to all users)', () => {
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    const sharedActions = screen.getByTestId('shared-actions-section');
+    expect(sharedActions.querySelector('[data-testid="start-new-button"]')).toBeInTheDocument();
+  });
+
+  // --- 16. Locked state (isUnlocked=false) ---
+
+  it('shows placeholder text when license is locked', () => {
+    setLicenseLocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.getByTestId('step4b-locked')).toBeInTheDocument();
+    expect(screen.getByText('Unlock pricing recommendations')).toBeInTheDocument();
+  });
+
+  it('does not show pricing, slider, or copy when locked', () => {
+    setLicenseLocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.queryByTestId('recommended-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('slider-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('copy-button')).not.toBeInTheDocument();
+  });
+
+  it('still shows step 4a reveal content when locked', () => {
+    setLicenseLocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.getByTestId('step4a-reveal')).toBeInTheDocument();
+    expect(screen.getByTestId('ingredient-cost-box')).toBeInTheDocument();
+    expect(screen.getByTestId('true-cost-box')).toBeInTheDocument();
+    expect(screen.getByTestId('gap-bar')).toBeInTheDocument();
+  });
+
+  it('"Start a new recipe" works when locked', () => {
+    setLicenseLocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    fireEvent.click(screen.getByTestId('start-new-button'));
+    expect(onStartNew).toHaveBeenCalledTimes(1);
+  });
+
+  it('still renders the 4a CTA when locked', () => {
+    setLicenseLocked();
+
+    render(
+      <Step4Reveal recipe={makeRecipe()} onStartNew={onStartNew} onGoToStep={onGoToStep} />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.getByTestId('step4a-cta')).toBeInTheDocument();
   });
 });

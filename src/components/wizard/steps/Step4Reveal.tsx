@@ -1,6 +1,14 @@
 /**
  * Step 4 — Reveal: Cost comparison, pricing slider, and actions.
  *
+ * Split into two sections:
+ *   - **Step 4a (THE REVEAL)**: Always free — animation sequence, cost comparison,
+ *     gap bar, and "What can I do about this?" CTA.
+ *   - **Step 4b (PRICING & ACTIONS)**: Gated by license — recommended selling price,
+ *     target cost ratio slider, copy results. Shows placeholder when locked.
+ *
+ * Shared actions (all users): "Start a new recipe"
+ *
  * Orchestrates a sequenced reveal animation:
  *   1. Skeleton shimmer (400ms)
  *   2. Left box fade-in (200ms) -> 150ms gap -> Right box fade-in (200ms)
@@ -15,6 +23,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { calculateTotalCosts, calculatePricing } from '../../../lib/calc/pricing.js';
 import type { Recipe, CostBreakdown, PricingResult } from '../../../lib/calc/types.js';
 import { formatCurrency } from '../../../lib/format.js';
+import { useLicense } from '../../../contexts/LicenseContext.js';
 import './step4.css';
 
 export interface Step4Props {
@@ -55,6 +64,7 @@ const PHASE_ORDER: Record<RevealPhase, number> = {
 };
 
 export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
+  const { isUnlocked } = useLicense();
   const costs: CostBreakdown = calculateTotalCosts(recipe);
 
   // Slider state
@@ -71,6 +81,7 @@ export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const section4bRef = useRef<HTMLElement>(null);
 
   // Run the reveal animation sequence on mount
   useEffect(() => {
@@ -196,6 +207,10 @@ export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
     [],
   );
 
+  const handleScrollTo4b = useCallback(() => {
+    section4bRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
   const phaseIndex = PHASE_ORDER[phase];
 
   const showSkeleton = phaseIndex < 1;
@@ -211,117 +226,156 @@ export default function Step4Reveal({ recipe, onStartNew }: Step4Props) {
 
   return (
     <div className="step4" data-testid="step4-reveal">
-      {/* Cost comparison boxes */}
-      <div className="step4-comparison" role="region" aria-label="Cost comparison">
-        {showSkeleton ? (
+      {/* ================================================================
+          Step 4a — THE REVEAL (always free)
+          ================================================================ */}
+      <section className="step4a" data-testid="step4a-reveal" aria-label="The Reveal">
+        {/* Cost comparison boxes */}
+        <div className="step4-comparison" role="region" aria-label="Cost comparison">
+          {showSkeleton ? (
+            <>
+              <div className="step4-skeleton" data-testid="skeleton-left" aria-hidden="true">
+                <div className="step4-skeleton__line step4-skeleton__line--short" />
+                <div className="step4-skeleton__line step4-skeleton__line--wide" />
+              </div>
+              <div className="step4-skeleton" data-testid="skeleton-right" aria-hidden="true">
+                <div className="step4-skeleton__line step4-skeleton__line--short" />
+                <div className="step4-skeleton__line step4-skeleton__line--wide" />
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                className={`step4-box ${showLeftBox ? 'step4-box--visible' : ''}`}
+                data-testid="ingredient-cost-box"
+              >
+                <div className="step4-box__label">Ingredients Only</div>
+                <div className="step4-box__amount" aria-live="polite">
+                  {formatCurrency(displayIngredientCost)}
+                </div>
+              </div>
+              <div
+                className={`step4-box ${showRightBox ? 'step4-box--visible' : ''}`}
+                data-testid="true-cost-box"
+              >
+                <div className="step4-box__label">True Cost</div>
+                <div className="step4-box__amount" aria-live="polite">
+                  {formatCurrency(displayTrueCost)}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Gap bar */}
+        <div className="step4-gap" data-testid="gap-section">
+          <div
+            className={`step4-gap__bar ${showGapBar ? 'step4-gap__bar--visible' : ''}`}
+            data-testid="gap-bar"
+            role="status"
+            aria-label={`Hidden cost gap: ${formatCurrency(gapAmount)}`}
+          >
+            <span className="step4-gap__text">Hidden costs you're absorbing: </span>
+            <span className="step4-gap__amount">{formatCurrency(gapAmount)}</span>
+          </div>
+        </div>
+
+        {/* CTA to scroll to 4b */}
+        <button
+          type="button"
+          className="step4a-cta"
+          onClick={handleScrollTo4b}
+          data-testid="step4a-cta"
+        >
+          What can I do about this? <span aria-hidden="true">↓</span>
+        </button>
+      </section>
+
+      {/* ================================================================
+          Step 4b — PRICING & ACTIONS (gated by license)
+          ================================================================ */}
+      <section
+        className="step4b"
+        data-testid="step4b-pricing"
+        aria-label="Pricing and Actions"
+        ref={section4bRef}
+      >
+        {isUnlocked ? (
           <>
-            <div className="step4-skeleton" data-testid="skeleton-left" aria-hidden="true">
-              <div className="step4-skeleton__line step4-skeleton__line--short" />
-              <div className="step4-skeleton__line step4-skeleton__line--wide" />
+            {/* Recommended price */}
+            <div
+              className={`step4-recommended ${showRecommended ? 'step4-recommended--visible' : ''}`}
+              data-testid="recommended-section"
+            >
+              <h3 className="step4-recommended__heading">Recommended Selling Price</h3>
+              <div className="step4-recommended__price" data-testid="recommended-price-unit">
+                {formatCurrency(pricing.recommendedPricePerUnit)}
+              </div>
+              <div className="step4-recommended__subtitle">
+                per {recipe.quantityUnit.replace(/s$/, '')}
+              </div>
+              <div className="step4-recommended__batch" data-testid="recommended-price-batch">
+                {formatCurrency(pricing.recommendedPricePerBatch)} per batch
+              </div>
+              <div className="step4-recommended__margin" data-testid="profit-margin">
+                {Math.round(pricing.profitMargin * 100)}% profit margin
+              </div>
             </div>
-            <div className="step4-skeleton" data-testid="skeleton-right" aria-hidden="true">
-              <div className="step4-skeleton__line step4-skeleton__line--short" />
-              <div className="step4-skeleton__line step4-skeleton__line--wide" />
+
+            {/* Target cost ratio slider */}
+            <div className="step4-slider" data-testid="slider-section">
+              <div className="step4-slider__header">
+                <label htmlFor="cost-ratio-slider" className="step4-slider__label">
+                  Target cost ratio
+                </label>
+                <span className="step4-slider__value" data-testid="slider-value">
+                  {Math.round(targetCostRatio * 100)}%
+                </span>
+              </div>
+              <input
+                id="cost-ratio-slider"
+                type="range"
+                className="step4-slider__input"
+                min="0.2"
+                max="0.5"
+                step="0.01"
+                value={targetCostRatio}
+                onChange={handleSliderChange}
+                aria-valuemin={20}
+                aria-valuemax={50}
+                aria-valuenow={Math.round(targetCostRatio * 100)}
+                aria-valuetext={`${Math.round(targetCostRatio * 100)}%`}
+              />
+              <div className="step4-slider__range">
+                <span className="step4-slider__range-label">20% (higher margin)</span>
+                <span className="step4-slider__range-label">50% (lower margin)</span>
+              </div>
+            </div>
+
+            {/* Copy button (paid users only) */}
+            <div className="step4-actions" data-testid="actions-section">
+              <button
+                type="button"
+                className="step4-btn step4-btn--copy"
+                onClick={handleCopy}
+                aria-label="Copy results to clipboard"
+                data-testid="copy-button"
+              >
+                Copy results
+              </button>
             </div>
           </>
         ) : (
-          <>
-            <div
-              className={`step4-box ${showLeftBox ? 'step4-box--visible' : ''}`}
-              data-testid="ingredient-cost-box"
-            >
-              <div className="step4-box__label">Ingredients Only</div>
-              <div className="step4-box__amount" aria-live="polite">
-                {formatCurrency(displayIngredientCost)}
-              </div>
-            </div>
-            <div
-              className={`step4-box ${showRightBox ? 'step4-box--visible' : ''}`}
-              data-testid="true-cost-box"
-            >
-              <div className="step4-box__label">True Cost</div>
-              <div className="step4-box__amount" aria-live="polite">
-                {formatCurrency(displayTrueCost)}
-              </div>
-            </div>
-          </>
+          <div className="step4b-locked" data-testid="step4b-locked">
+            <p className="step4b-locked__text">Unlock pricing recommendations</p>
+          </div>
         )}
-      </div>
+      </section>
 
-      {/* Gap bar */}
-      <div className="step4-gap" data-testid="gap-section">
-        <div
-          className={`step4-gap__bar ${showGapBar ? 'step4-gap__bar--visible' : ''}`}
-          data-testid="gap-bar"
-          role="status"
-          aria-label={`Hidden cost gap: ${formatCurrency(gapAmount)}`}
-        >
-          <span className="step4-gap__text">Hidden costs you're absorbing: </span>
-          <span className="step4-gap__amount">{formatCurrency(gapAmount)}</span>
-        </div>
-      </div>
-
-      {/* Recommended price */}
-      <div
-        className={`step4-recommended ${showRecommended ? 'step4-recommended--visible' : ''}`}
-        data-testid="recommended-section"
-      >
-        <h3 className="step4-recommended__heading">Recommended Selling Price</h3>
-        <div className="step4-recommended__price" data-testid="recommended-price-unit">
-          {formatCurrency(pricing.recommendedPricePerUnit)}
-        </div>
-        <div className="step4-recommended__subtitle">
-          per {recipe.quantityUnit.replace(/s$/, '')}
-        </div>
-        <div className="step4-recommended__batch" data-testid="recommended-price-batch">
-          {formatCurrency(pricing.recommendedPricePerBatch)} per batch
-        </div>
-        <div className="step4-recommended__margin" data-testid="profit-margin">
-          {Math.round(pricing.profitMargin * 100)}% profit margin
-        </div>
-      </div>
-
-      {/* Target cost ratio slider */}
-      <div className="step4-slider" data-testid="slider-section">
-        <div className="step4-slider__header">
-          <label htmlFor="cost-ratio-slider" className="step4-slider__label">
-            Target cost ratio
-          </label>
-          <span className="step4-slider__value" data-testid="slider-value">
-            {Math.round(targetCostRatio * 100)}%
-          </span>
-        </div>
-        <input
-          id="cost-ratio-slider"
-          type="range"
-          className="step4-slider__input"
-          min="0.2"
-          max="0.5"
-          step="0.01"
-          value={targetCostRatio}
-          onChange={handleSliderChange}
-          aria-valuemin={20}
-          aria-valuemax={50}
-          aria-valuenow={Math.round(targetCostRatio * 100)}
-          aria-valuetext={`${Math.round(targetCostRatio * 100)}%`}
-        />
-        <div className="step4-slider__range">
-          <span className="step4-slider__range-label">20% (higher margin)</span>
-          <span className="step4-slider__range-label">50% (lower margin)</span>
-        </div>
-      </div>
-
-      {/* Action buttons */}
-      <div className="step4-actions" data-testid="actions-section">
-        <button
-          type="button"
-          className="step4-btn step4-btn--copy"
-          onClick={handleCopy}
-          aria-label="Copy results to clipboard"
-          data-testid="copy-button"
-        >
-          Copy results
-        </button>
+      {/* ================================================================
+          Shared actions — all users
+          ================================================================ */}
+      <div className="step4-shared-actions" data-testid="shared-actions-section">
         <button
           type="button"
           className="step4-btn step4-btn--ghost"

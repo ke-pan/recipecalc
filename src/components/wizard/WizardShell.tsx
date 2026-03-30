@@ -8,6 +8,7 @@ import Step2Ingredients from './steps/Step2Ingredients';
 import Step3LaborOverhead from './steps/Step3LaborOverhead';
 import Step4Reveal from './steps/Step4Reveal';
 import { useRecipePersistence } from '../../hooks/useRecipePersistence';
+import { LicenseProvider } from '../../contexts/LicenseContext';
 import './wizard.css';
 
 /** CTA button labels per step (step 3 has its own actions, so no entry needed) */
@@ -168,60 +169,62 @@ export default function WizardShell() {
   };
 
   return (
-    <div className="wizard" onKeyDown={handleKeyDown}>
-      {showResume && savedData && (
-        <ResumeBanner
-          recipeName={savedData.recipe.name || 'Untitled recipe'}
-          onContinue={handleResumeContinue}
-          onStartFresh={handleResumeFresh}
-        />
-      )}
+    <LicenseProvider>
+      <div className="wizard" onKeyDown={handleKeyDown}>
+        {showResume && savedData && (
+          <ResumeBanner
+            recipeName={savedData.recipe.name || 'Untitled recipe'}
+            onContinue={handleResumeContinue}
+            onStartFresh={handleResumeFresh}
+          />
+        )}
 
-      <header className="wizard-header">
-        <h1 className="wizard-header__title">RecipeCalc</h1>
-        <StepIndicator
-          currentStep={currentStep}
-          stepsCompleted={stepsCompleted}
-          onGoToStep={handleGoToStep}
-        />
-      </header>
+        <header className="wizard-header">
+          <h1 className="wizard-header__title">RecipeCalc</h1>
+          <StepIndicator
+            currentStep={currentStep}
+            stepsCompleted={stepsCompleted}
+            onGoToStep={handleGoToStep}
+          />
+        </header>
 
-      <main className="wizard-main">
-        <div
-          className={`wizard-content ${animationClass()}`}
-          data-step={displayStep}
-          key={`${displayStep}-${restoreKey}`}
-        >
-          {renderStep()}
-        </div>
-      </main>
+        <main className="wizard-main">
+          <div
+            className={`wizard-content ${animationClass()}`}
+            data-step={displayStep}
+            key={`${displayStep}-${restoreKey}`}
+          >
+            {renderStep()}
+          </div>
+        </main>
 
-      {/* Step 4 (reveal) has its own actions, so hide the shared footer */}
-      {displayStep < 3 && (
-        <footer className="wizard-footer">
-          <div className="wizard-footer__inner">
-            {!isFirstStep && (
+        {/* Step 4 (reveal) has its own actions, so hide the shared footer */}
+        {displayStep < 3 && (
+          <footer className="wizard-footer">
+            <div className="wizard-footer__inner">
+              {!isFirstStep && (
+                <button
+                  type="button"
+                  className="wizard-btn wizard-btn--back"
+                  onClick={handleBack}
+                  aria-label="Go to previous step"
+                >
+                  Back
+                </button>
+              )}
               <button
                 type="button"
-                className="wizard-btn wizard-btn--back"
-                onClick={handleBack}
-                aria-label="Go to previous step"
+                className="wizard-btn wizard-btn--next"
+                onClick={handleNext}
+                disabled={!stepValid[currentStep]}
+                aria-label="Go to next step"
               >
-                Back
+                {CTA_LABELS[currentStep]}
               </button>
-            )}
-            <button
-              type="button"
-              className="wizard-btn wizard-btn--next"
-              onClick={handleNext}
-              disabled={!stepValid[currentStep]}
-              aria-label="Go to next step"
-            >
-              {CTA_LABELS[currentStep]}
-            </button>
-          </div>
-        </footer>
-      )}
-    </div>
+            </div>
+          </footer>
+        )}
+      </div>
+    </LicenseProvider>
   );
 }

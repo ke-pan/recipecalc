@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Step 4 Reveal — Cost comparison, pricing slider, and actions
+   Step 4 Reveal — Split into 4a (free reveal) and 4b (gated pricing)
    Uses design tokens from global.css exclusively.
    ========================================================================== */
 
@@ -11,6 +11,80 @@
   background-color: var(--reveal-bg);
   border-radius: var(--radius-lg);
   padding: var(--space-lg) 0;
+}
+
+/* --------------------------------------------------------------------------
+   Step 4a — THE REVEAL (always free)
+   -------------------------------------------------------------------------- */
+
+.step4a {
+  margin-bottom: var(--space-xl);
+}
+
+/* --------------------------------------------------------------------------
+   Step 4a CTA — "What can I do about this?"
+   -------------------------------------------------------------------------- */
+
+.step4a-cta {
+  display: block;
+  margin: var(--space-lg) auto 0;
+  background: none;
+  border: none;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  padding: var(--space-sm) var(--space-md);
+  transition: opacity var(--duration-micro) var(--ease-enter);
+}
+
+.step4a-cta:hover {
+  opacity: 0.8;
+}
+
+.step4a-cta:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* --------------------------------------------------------------------------
+   Step 4b — PRICING & ACTIONS (gated by license)
+   -------------------------------------------------------------------------- */
+
+.step4b {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-xl);
+  margin-bottom: var(--space-lg);
+}
+
+/* --------------------------------------------------------------------------
+   Step 4b locked state — placeholder for free users
+   -------------------------------------------------------------------------- */
+
+.step4b-locked {
+  text-align: center;
+  padding: var(--space-xl) var(--space-md);
+}
+
+.step4b-locked__text {
+  font-family: var(--font-body);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Shared actions — always visible for all users
+   -------------------------------------------------------------------------- */
+
+.step4-shared-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-items: center;
 }
 
 /* --------------------------------------------------------------------------
