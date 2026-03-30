@@ -35,6 +35,9 @@ const enableUmami = import.meta.env.PROD && !!umamiWebsiteId && !!umamiSrc;
     {enableUmami && (
       <script defer src={umamiSrc} data-website-id={umamiWebsiteId}></script>
     )}
+
+    <!-- Lemon.js: LemonSqueezy checkout overlay (deferred, loads after page) -->
+    <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
   </head>
   <body>
     <slot />
