@@ -2,10 +2,11 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import HeroCarousel from '../components/hero/HeroCarousel';
 import '../components/hero/hero.css';
+import '../styles/landing.css';
 
-const title = 'RecipeCalc — Recipe Cost Calculator for Home Bakers';
+const title = 'Recipe Cost Calculator — Free for Home Food Makers | RecipeCalc';
 const description =
-  'Know your true recipe cost and price with confidence. Free recipe cost calculator for home bakers, cottage food sellers, and small bakeries.';
+  'Free recipe cost calculator for home bakers, cottage food sellers, and food truck owners. Calculate your true cost — ingredients, labor, packaging, overhead — and find your real selling price.';
 ---
 
 <BaseLayout title={title} description={description}>
@@ -19,7 +20,166 @@ const description =
     <meta name="twitter:description" content={description} />
   </Fragment>
 
-  <main class="container">
-    <HeroCarousel client:load />
-  </main>
+  <!-- 1. Hero -->
+  <HeroCarousel client:load />
+
+  <!-- 2. Problem — The emotional gut punch -->
+  <section class="section section--surface">
+    <div class="section__inner problem">
+      <p class="section-label">The real problem</p>
+
+      <h2 class="problem__hook">
+        Most food makers only count ingredients.<br />
+        The <em>real</em> cost is 3-5x higher.
+      </h2>
+      <p class="problem__sub">
+        Your time, packaging, overhead, and platform fees add up fast.
+        Here's what that looks like for a batch of chocolate chip cookies.
+      </p>
+
+      <div class="problem__compare">
+        <div class="problem__card">
+          <p class="problem__card-label">What you think it costs</p>
+          <div class="problem__line"><span>Flour</span><span class="problem__line-amount">$2.49</span></div>
+          <div class="problem__line"><span>Butter</span><span class="problem__line-amount">$3.20</span></div>
+          <div class="problem__line"><span>Sugar</span><span class="problem__line-amount">$1.80</span></div>
+          <div class="problem__line"><span>Eggs</span><span class="problem__line-amount">$0.90</span></div>
+          <div class="problem__line"><span>Chocolate chips</span><span class="problem__line-amount">$2.50</span></div>
+          <div class="problem__total"><span>Total</span><span class="problem__total-amount">$10.89</span></div>
+        </div>
+
+        <div class="problem__arrow">&#8594;</div>
+
+        <div class="problem__card problem__card--real">
+          <p class="problem__card-label">What it actually costs</p>
+          <div class="problem__line"><span>Ingredients</span><span class="problem__line-amount">$10.89</span></div>
+          <div class="problem__line"><span>Your labor (2.5 hrs)</span><span class="problem__line-amount">$37.50</span></div>
+          <div class="problem__line"><span>Packaging</span><span class="problem__line-amount">$4.80</span></div>
+          <div class="problem__line"><span>Overhead</span><span class="problem__line-amount">$3.00</span></div>
+          <div class="problem__line"><span>Platform fees</span><span class="problem__line-amount">$2.50</span></div>
+          <div class="problem__total"><span>True cost</span><span class="problem__total-amount">$58.69</span></div>
+        </div>
+      </div>
+
+      <div class="problem__gap-wrapper">
+        <div class="problem__gap">
+          <span class="problem__gap-amount">$47.80</span>
+          <span class="problem__gap-text">hidden cost per batch you're absorbing</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. How it works -->
+  <section class="section">
+    <div class="section__inner">
+      <p class="section-label" style="text-align:center">How it works</p>
+      <h2 class="section-heading" style="text-align:center;margin-bottom:40px">Three steps to your true price</h2>
+      <div class="steps__grid">
+        <div class="step-card">
+          <div class="step-card__number">1</div>
+          <h3 class="step-card__title">Enter your recipe</h3>
+          <p class="step-card__desc">Add ingredients with purchase prices and amounts. Smart unit conversion does the math between cups, grams, and ounces.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-card__number">2</div>
+          <h3 class="step-card__title">Add your real costs</h3>
+          <p class="step-card__desc">Your hourly rate, packaging, kitchen overhead, delivery or platform fees. The costs most bakers forget or ignore.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-card__number">3</div>
+          <h3 class="step-card__title">Get your price</h3>
+          <p class="step-card__desc">See your true cost vs. ingredient cost side by side. Get a recommended selling price with adjustable profit margin.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Features -->
+  <section class="section section--surface">
+    <div class="section__inner">
+      <p class="section-label" style="text-align:center">Features</p>
+      <h2 class="section-heading" style="text-align:center;margin-bottom:40px">Built for makers, not accountants</h2>
+      <div class="features__grid">
+        <div class="feature-card">
+          <div class="feature-card__icon">&#x1F4CA;</div>
+          <h3 class="feature-card__title">True cost breakdown</h3>
+          <p class="feature-card__desc">See every hidden cost. Ingredient cost vs. true cost, with the gap you've been absorbing on every batch.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card__icon">&#x1F3AF;</div>
+          <h3 class="feature-card__title">Recommended selling price</h3>
+          <p class="feature-card__desc">Get a data-backed price per unit and per batch, with an adjustable margin slider from 20% to 50%.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card__icon">&#x1F4D6;</div>
+          <h3 class="feature-card__title">Save your recipes</h3>
+          <p class="feature-card__desc">Build a recipe library with costs. Export and import as JSON backup. Your data never leaves your device.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-card__icon">&#x26A1;</div>
+          <h3 class="feature-card__title">No signup, works offline</h3>
+          <p class="feature-card__desc">No account, no login, no cloud. Everything runs in your browser. Start calculating in under 10 seconds.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Social proof placeholder — reserved for real user quotes after launch -->
+  <section class="section">
+    <div class="section__inner proof">
+      <div class="proof__placeholder">
+        Testimonials section — reserved for real user quotes after launch.
+        Don't ship fake social proof. Wait for Etsy reviews and Reddit feedback.
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. FAQ -->
+  <section class="section section--surface">
+    <div class="section__inner">
+      <p class="section-label" style="text-align:center">FAQ</p>
+      <h2 class="section-heading" style="text-align:center;margin-bottom:36px">Common questions</h2>
+      <div class="faq__list">
+        <details class="faq-item">
+          <summary>Is this recipe cost calculator really free?</summary>
+          <div class="faq-item__answer">The cost breakdown is free. You'll see your true recipe cost, the gap between ingredient cost and real cost, and a full breakdown of hidden costs. The paid version ($19 one-time, not a subscription) adds a recommended selling price with adjustable margin, recipe saving, and export.</div>
+        </details>
+        <details class="faq-item">
+          <summary>How do you calculate the cost of a recipe?</summary>
+          <div class="faq-item__answer">We add up four layers: ingredient costs (with unit conversion so you can mix cups, grams, and pounds), labor cost (your hourly rate times batch time), packaging and overhead (utilities, kitchen rental, etc.), and platform fees (Etsy, farmers market booth, delivery apps, etc.). Most recipe calculators only handle the first layer.</div>
+        </details>
+        <details class="faq-item">
+          <summary>How should I price my homemade food products?</summary>
+          <div class="faq-item__answer">A common rule of thumb is that ingredient costs should be 25-35% of your selling price. But many home food makers forget to include their labor, packaging, and overhead. Our calculator shows your true total cost and suggests a price based on your target profit margin. For example, if your cookies cost $2.44 each to make (including labor), a 30% cost target means selling at $8.13. Works for baked goods, ice cream, sauces, prepared meals, and more.</div>
+        </details>
+        <details class="faq-item">
+          <summary>Where is my recipe data stored?</summary>
+          <div class="faq-item__answer">Everything stays on your device in your browser's local storage. There are no accounts, no servers, no cloud sync. Your recipes never leave your computer. You can export them as a JSON backup file anytime and import them on another device.</div>
+        </details>
+        <details class="faq-item">
+          <summary>Does this work for cakes, ice cream, BBQ, and other foods?</summary>
+          <div class="faq-item__answer">Yes. RecipeCalc works for any food product: cakes, cookies, ice cream, BBQ, sauces, prepared meals, catering portions, and more. Enter your ingredients and quantities, add your time and overhead, and get a true cost per serving or per batch. The unit converter handles weight, volume, and count conversions automatically.</div>
+        </details>
+        <details class="faq-item">
+          <summary>What if I sell on Etsy or at farmers markets?</summary>
+          <div class="faq-item__answer">Add your platform fees (like Etsy's ~15% transaction fee) as a fixed estimate in the overhead section. The calculator factors it into your true cost. We're working on a percentage-based fee mode for a future update so you can enter "15%" directly.</div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Final CTA -->
+  <section class="section section--reveal final-cta">
+    <div class="section__inner">
+      <h2 class="final-cta__heading">Stop guessing.<br />Start pricing.</h2>
+      <p class="final-cta__sub">Most home food makers undercharge by 40-60%. Find out where you stand in 3 minutes.</p>
+      <a href="/calculator" class="btn">Calculate your true cost — free</a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="landing-footer">
+    <p>&copy; 2026 RecipeCalc. Know your true cost. Price with confidence.</p>
+  </footer>
 </BaseLayout>

@@ -18,6 +18,7 @@
 
   /* Semantic — each has a specific emotional role */
   --accent: #B85C38;
+  --accent-hover: #A04E2E;
   --caution: #C96A2B;
   --confidence: #4E7A5D;
 
@@ -28,6 +29,7 @@
   --font-display: 'Fraunces', serif;
   --font-body: 'DM Sans', sans-serif;
   --font-mono: 'Geist Mono', monospace;
+  --font-data: 'Geist Mono', monospace;
 
   --text-xs: 0.6875rem;   /* 11px */
   --text-sm: 0.8125rem;   /* 13px */

@@ -11,14 +11,6 @@ const TITLE_WORDS = [
   'pastries',
 ] as const;
 
-const SUBTITLE_WORDS = [
-  'Home Bakers',
-  'Cottage Food Sellers',
-  'Food Truck Owners',
-  'Small Bakeries',
-  'Caterers',
-] as const;
-
 const INTERVAL_MS = 3000;
 const TRANSITION_MS = 300;
 const TRANSITION_CSS = `transform ${TRANSITION_MS}ms var(--ease-enter), opacity ${TRANSITION_MS}ms var(--ease-enter)`;
@@ -48,12 +40,10 @@ function animateEnter(el: HTMLElement | null): void {
 
 export default function HeroCarousel() {
   const [titleIndex, setTitleIndex] = useState(0);
-  const [subtitleIndex, setSubtitleIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('visible');
   const [reducedMotion, setReducedMotion] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const titleWordRef = useRef<HTMLSpanElement>(null);
-  const subtitleWordRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -68,7 +58,6 @@ export default function HeroCarousel() {
 
     setTimeout(() => {
       setTitleIndex((prev) => (prev + 1) % TITLE_WORDS.length);
-      setSubtitleIndex((prev) => (prev + 1) % SUBTITLE_WORDS.length);
       setPhase('entering');
 
       setTimeout(() => setPhase('visible'), TRANSITION_MS);
@@ -93,7 +82,6 @@ export default function HeroCarousel() {
   useEffect(() => {
     if (phase === 'entering' && !reducedMotion) {
       animateEnter(titleWordRef.current);
-      animateEnter(subtitleWordRef.current);
     }
   }, [phase, reducedMotion]);
 
@@ -101,43 +89,60 @@ export default function HeroCarousel() {
 
   return (
     <section className="hero" aria-label="RecipeCalc hero">
-      <p className="hero__brand">RecipeCalc</p>
+      <div className="hero__content">
+        <p className="hero__brand">RecipeCalc</p>
 
-      <h1 className="hero__title">
-        Are your{' '}
-        <span className="hero__rotating-wrapper">
-          <span
-            ref={titleWordRef}
-            className="hero__rotating-word"
-            data-testid="title-word"
-            style={inlineStyle}
-          >
-            {TITLE_WORDS[titleIndex]}
+        <h1 className="hero__title">Recipe Cost{'\n'}Calculator</h1>
+
+        <p className="hero__hook">
+          Find out what your{' '}
+          <span className="hero__rotating-wrapper">
+            <span
+              ref={titleWordRef}
+              className="hero__rotating-word"
+              data-testid="title-word"
+              style={inlineStyle}
+            >
+              {TITLE_WORDS[titleIndex]}
+            </span>
+          </span>{' '}
+          really cost.
+        </p>
+
+        <p className="hero__desc">
+          Free for home bakers, ice cream makers, BBQ pitmasters, caterers,
+          and anyone who makes food for a living.
+          Add your ingredients, labor, and overhead. See your true cost in minutes.
+        </p>
+
+        <a href="/calculator" className="hero__cta">
+          Calculate your true cost — free
+        </a>
+
+        <div className="hero__badges">
+          <span className="hero__badge">
+            <span className="hero__badge-icon">&#10003;</span> Free cost breakdown
           </span>
-        </span>
-        <br />
-        really making money?
-      </h1>
-
-      <p className="hero__subtitle">
-        For{' '}
-        <span className="hero__rotating-wrapper">
-          <span
-            ref={subtitleWordRef}
-            className="hero__rotating-word hero__rotating-word--subtitle"
-            data-testid="subtitle-word"
-            style={inlineStyle}
-          >
-            {SUBTITLE_WORDS[subtitleIndex]}
+          <span className="hero__badge">
+            <span className="hero__badge-icon">&#10003;</span> No account needed
           </span>
-        </span>
-      </p>
+          <span className="hero__badge">
+            <span className="hero__badge-icon">&#10003;</span> Data stays on your device
+          </span>
+        </div>
+      </div>
 
-      <a href="/calculator" className="hero__cta">
-        Calculate your true cost — free
-      </a>
+      <div className="hero__photo">
+        <img
+          src="/hero-baking.jpg"
+          alt="Baker dusting powdered sugar over muffins and croissants"
+          width="480"
+          height="640"
+          loading="eager"
+        />
+      </div>
     </section>
   );
 }
 
-export { TITLE_WORDS, SUBTITLE_WORDS, INTERVAL_MS };
+export { TITLE_WORDS, INTERVAL_MS };

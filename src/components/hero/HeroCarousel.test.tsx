@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
-import HeroCarousel, { TITLE_WORDS, SUBTITLE_WORDS, INTERVAL_MS } from './HeroCarousel';
+import HeroCarousel, { TITLE_WORDS, INTERVAL_MS } from './HeroCarousel';
 
 // Helper to mock matchMedia
 function mockMatchMedia(matches: boolean) {
@@ -32,14 +32,22 @@ describe('HeroCarousel', () => {
     expect(screen.getByTestId('title-word')).toHaveTextContent('cookies');
   });
 
-  it('renders the initial subtitle word "Home Bakers"', () => {
-    render(<HeroCarousel />);
-    expect(screen.getByTestId('subtitle-word')).toHaveTextContent('Home Bakers');
-  });
-
   it('renders the product name "RecipeCalc"', () => {
     render(<HeroCarousel />);
     expect(screen.getByText('RecipeCalc')).toBeInTheDocument();
+  });
+
+  it('renders the SEO H1 with "Recipe Cost Calculator"', () => {
+    render(<HeroCarousel />);
+    const h1 = screen.getByRole('heading', { level: 1 });
+    expect(h1).toHaveTextContent(/Recipe Cost/);
+    expect(h1).toHaveTextContent(/Calculator/);
+  });
+
+  it('renders the emotional hook subtitle', () => {
+    render(<HeroCarousel />);
+    expect(screen.getByText(/Find out what your/)).toBeInTheDocument();
+    expect(screen.getByText(/really cost/)).toBeInTheDocument();
   });
 
   it('renders the CTA link to /calculator', () => {
@@ -47,6 +55,20 @@ describe('HeroCarousel', () => {
     const cta = screen.getByRole('link', { name: /calculate your true cost/i });
     expect(cta).toBeInTheDocument();
     expect(cta).toHaveAttribute('href', '/calculator');
+  });
+
+  it('renders trust badges', () => {
+    render(<HeroCarousel />);
+    expect(screen.getByText(/Free cost breakdown/)).toBeInTheDocument();
+    expect(screen.getByText(/No account needed/)).toBeInTheDocument();
+    expect(screen.getByText(/Data stays on your device/)).toBeInTheDocument();
+  });
+
+  it('renders the hero photo', () => {
+    render(<HeroCarousel />);
+    const img = screen.getByAltText('Baker dusting powdered sugar over muffins and croissants');
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute('src', '/hero-baking.jpg');
   });
 
   it('advances to the next word after the interval', () => {
@@ -65,41 +87,17 @@ describe('HeroCarousel', () => {
     });
 
     expect(screen.getByTestId('title-word')).toHaveTextContent(TITLE_WORDS[1]);
-    expect(screen.getByTestId('subtitle-word')).toHaveTextContent(SUBTITLE_WORDS[1]);
   });
 
   it('cycles title words back to start after reaching the end', () => {
     render(<HeroCarousel />);
 
-    // Each interval fires advance(), which uses setTimeout(300) + setTimeout(300)
-    // We need to advance through TITLE_WORDS.length intervals.
     // Advance all at once: TITLE_WORDS.length intervals + transition time
     const totalTime = TITLE_WORDS.length * INTERVAL_MS + 600;
     act(() => { vi.advanceTimersByTime(totalTime); });
 
     // After cycling through all 8 words, should be back to first
     expect(screen.getByTestId('title-word')).toHaveTextContent(TITLE_WORDS[0]);
-  });
-
-  it('subtitle cycles independently from title', () => {
-    render(<HeroCarousel />);
-
-    // Advance through all subtitle words (5 items)
-    for (let i = 0; i < SUBTITLE_WORDS.length; i++) {
-      act(() => {
-        vi.advanceTimersByTime(INTERVAL_MS);
-      });
-      act(() => {
-        vi.advanceTimersByTime(300);
-      });
-      act(() => {
-        vi.advanceTimersByTime(300);
-      });
-    }
-
-    // Subtitle should be back to first, title should be at index 5
-    expect(screen.getByTestId('subtitle-word')).toHaveTextContent(SUBTITLE_WORDS[0]);
-    expect(screen.getByTestId('title-word')).toHaveTextContent(TITLE_WORDS[5]);
   });
 
   it('stops rotation when prefers-reduced-motion is enabled', () => {
@@ -112,13 +110,6 @@ describe('HeroCarousel', () => {
     });
 
     expect(screen.getByTestId('title-word')).toHaveTextContent(TITLE_WORDS[0]);
-    expect(screen.getByTestId('subtitle-word')).toHaveTextContent(SUBTITLE_WORDS[0]);
-  });
-
-  it('renders static text around the rotating words', () => {
-    render(<HeroCarousel />);
-    expect(screen.getByText(/are your/i)).toBeInTheDocument();
-    expect(screen.getByText(/really making money/i)).toBeInTheDocument();
   });
 
   it('has correct aria-label on the hero section', () => {
@@ -126,10 +117,8 @@ describe('HeroCarousel', () => {
     expect(screen.getByLabelText('RecipeCalc hero')).toBeInTheDocument();
   });
 
-  it('exports the expected word arrays', () => {
+  it('exports the expected word array', () => {
     expect(TITLE_WORDS).toHaveLength(8);
-    expect(SUBTITLE_WORDS).toHaveLength(5);
     expect(TITLE_WORDS[0]).toBe('cookies');
-    expect(SUBTITLE_WORDS[0]).toBe('Home Bakers');
   });
 });
