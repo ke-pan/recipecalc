@@ -41,7 +41,7 @@ function mockMatchMedia(matches: boolean) {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const HINT_KEY = 'recipecalc_license_hint';
+const HINT_KEY = 'recipepricer_license_hint';
 const OLD_KEY = 'recipecalc_license';
 
 /** Override fetch to make /api/activate fail with a specific reason. */
@@ -119,9 +119,9 @@ describe('ActivatePage', () => {
     expect(screen.getByText('Activate')).toBeInTheDocument();
   });
 
-  it('renders RecipeCalc logo linking to home', () => {
+  it('renders RecipePricer logo linking to home', () => {
     render(<ActivatePage />);
-    const logo = screen.getByText('RecipeCalc');
+    const logo = screen.getByText('RecipePricer');
     expect(logo).toBeInTheDocument();
     expect(logo.closest('a')).toHaveAttribute('href', '/');
   });

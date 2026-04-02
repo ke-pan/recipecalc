@@ -31,7 +31,7 @@ RFC-001 的免费计算器 MVP 已上线并验证了核心体验（wizard + reve
 1. LemonSqueezy 集成：$19 一次性买断 → 生成 license key
 2. `/activate` 页面：粘贴 key → 客户端验证 → 解锁付费功能；自有网站购买支持 URL 参数自动激活
 3. 付费墙 UI：Step 4 拆分为 4a（免费 reveal）+ 4b（付费行动区），推荐售价模糊、滑块锁定
-4. 配方保存：localStorage `recipecalc_recipes` 数组（付费）+ JSON 导入/导出作为数据安全网
+4. 配方保存：localStorage `recipepricer_recipes` 数组（付费）+ JSON 导入/导出作为数据安全网
 5. `/recipes` 页面：已保存配方列表 + CRUD
 6. Umami Analytics：全漏斗事件追踪（含购买完成事件）
 7. Edge case nudges：隐藏成本全 $0 / 人工时间 = 0 时温和提醒
@@ -97,7 +97,7 @@ License key 有两个端点，语义不同：
 POST https://api.lemonsqueezy.com/v1/licenses/activate
 Content-Type: application/x-www-form-urlencoded
 
-license_key=xxx-xxx-xxx&instance_name=recipecalc-web
+license_key=xxx-xxx-xxx&instance_name=recipepricer-web
 ```
 
 响应 200 包含：`license_key`、`instance`（含 `id`）、`meta`（含 `store_id`、`product_id`、`variant_id`）。
@@ -109,7 +109,7 @@ const EXPECTED_PRODUCT_ID = process.env.PUBLIC_LS_PRODUCT_ID;
 
 if (response.meta.store_id !== EXPECTED_STORE_ID ||
     response.meta.product_id !== EXPECTED_PRODUCT_ID) {
-  throw new Error('This key is not for RecipeCalc');
+  throw new Error('This key is not for RecipePricer');
 }
 ```
 
@@ -254,7 +254,7 @@ DOM 中渲染真实数字，CSS blur 覆盖。技术用户可通过 DevTools 看
 
 ### 5.6 配方保存
 
-**数据模型** — `localStorage.recipecalc_recipes`:
+**数据模型** — `localStorage.recipepricer_recipes`:
 ```json
 [
   {
@@ -285,10 +285,10 @@ DOM 中渲染真实数字，CSS blur 覆盖。技术用户可通过 DevTools 看
 - **Save**: Step 4b "Save recipe" → 序列化当前 recipe 数据 → 追加到数组
 - **Update**: 编辑已保存配方 → 加载到 wizard → 完成后覆盖原条目（by id）
 - **Delete**: `/recipes` 页面删除（确认弹窗）
-- **Load**: `/recipes` 页面点击配方 → **检测 `recipecalc_current` 是否有未保存草稿** → 有则提示 "You have unsaved changes. Load this recipe anyway?" → 确认后覆盖
+- **Load**: `/recipes` 页面点击配方 → **检测 `recipepricer_current` 是否有未保存草稿** → 有则提示 "You have unsaved changes. Load this recipe anyway?" → 确认后覆盖
 
 **JSON 导入/导出**（localStorage 安全网）:
-- `/recipes` 页面提供 "Export all recipes" → 下载 `recipecalc-backup-YYYY-MM-DD.json`
+- `/recipes` 页面提供 "Export all recipes" → 下载 `recipepricer-backup-YYYY-MM-DD.json`
 - "Import recipes" → 上传 JSON → 合并到现有列表（by id 去重）
 - 导出文件**只含配方数据，不含 license key**（key 是凭证不是数据，避免文件分享导致 key 泄露）
 - License key 丢失后的恢复路径：重新粘贴 key 到 `/activate`（key 在购买邮件中）
@@ -341,10 +341,10 @@ Astro 静态页 + React island。
 
 **Etsy/Gumroad 交付文件内容**（单页 PDF + 纯文本）:
 ```
-🔑 Your RecipeCalc License Key: XXXX-XXXX-XXXX-XXXX
+🔑 Your RecipePricer License Key: XXXX-XXXX-XXXX-XXXX
 
 How to activate:
-1. Go to https://recipecalc.com/activate
+1. Go to https://recipepricer.com/activate
 2. Paste your key above
 3. Click "Activate" — you're done!
 
@@ -353,7 +353,7 @@ What you get:
 ✓ Save unlimited recipes
 ✓ Copy & export results
 
-Questions? Email support@recipecalc.com
+Questions? Email support@recipepricer.com
 ```
 
 **运营流程**:
@@ -363,7 +363,7 @@ Questions? Email support@recipecalc.com
 | 库存管理 | 每批预生成 50 keys。当 Etsy/Gumroad 库存 < 10 时补货。初期手动，量大后脚本化 |
 | 退款 | Etsy/Gumroad 退款后，手动在 LemonSqueezy 后台禁用对应 key。用户下次 validate 时功能锁定 |
 | 重复/争议 | 一个 key 只能激活 5 次（LemonSqueezy activation_limit）。超限 → 提示联系 support |
-| 客服 | 单一邮箱 support@recipecalc.com。MVP 阶段手动处理，量小可控 |
+| 客服 | 单一邮箱 support@recipepricer.com。MVP 阶段手动处理，量小可控 |
 | 定价差异 | 自有网站 $19，Etsy 可定 $15-19（Etsy 抽 15% 交易费），Gumroad $19 |
 
 **风险承认**: 预生成 key 方案在 LemonSqueezy 文档中非标准路径（正常是购买即生成）。需要测试 LemonSqueezy 是否支持批量生成未关联订单的 key。**如果不支持**，备选方案：Etsy/Gumroad listing 引导买家到自有网站完成支付（Etsy listing 不直接卖 key，而是卖"购买入口"）。
@@ -425,22 +425,22 @@ step_1 → step_2 → step_3 → wizard_complete → paywall_view → paywall_cl
 
 ```json
 {
-  "recipecalc_current": {
+  "recipepricer_current": {
     "version": 1,
     "step": 2,
     "recipe": { /* 同 RFC-001，字段名统一用 laborAndOverhead */ }
   },
-  "recipecalc_recipes": [
+  "recipepricer_recipes": [
     {
       "id": "uuid",
       "version": 1,
       "savedAt": "ISO-8601",
       "updatedAt": "ISO-8601",
-      "recipe": { /* 同 recipecalc_current.recipe */ },
+      "recipe": { /* 同 recipepricer_current.recipe */ },
       "targetCostRatio": 0.30
     }
   ],
-  "recipecalc_license": {
+  "recipepricer_license": {
     "key": "xxx-xxx-xxx",
     "instanceId": "lemonsqueezy-instance-id",
     "activatedAt": "ISO-8601",
@@ -530,7 +530,7 @@ type ActivateResult =
 
 ### 配方管理
 
-- [ ] Step 4b "Save recipe" 成功保存到 `recipecalc_recipes`（仅 recipe 数据，不存派生 results）
+- [ ] Step 4b "Save recipe" 成功保存到 `recipepricer_recipes`（仅 recipe 数据，不存派生 results）
 - [ ] `/recipes` 页面正确列出所有已保存配方，成本和推荐售价实时计算显示
 - [ ] 点击配方可加载到 wizard 编辑；如有未保存草稿则提示确认
 - [ ] 删除配方有确认弹窗

@@ -1,7 +1,7 @@
 # Research Report: Recipe & Food Cost Calculator
 
 > **NOTE**: This is the original market research document. The approved implementation
-> spec is in `docs/design-recipecalc-pricing-therapist.md`. Where they differ (pricing
+> spec is in `docs/design-recipepricer-pricing-therapist.md`. Where they differ (pricing
 > model, tech stack, feature tiers), the design doc is authoritative. This document is
 > retained as historical context for demand validation and competitive analysis.
 

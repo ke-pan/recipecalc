@@ -9,7 +9,7 @@ import type { PantryItem } from '../../types/pantry.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = 'recipecalc_recipes';
+const STORAGE_KEY = 'recipepricer_recipes';
 
 function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
   return {

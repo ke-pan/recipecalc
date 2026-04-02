@@ -6,7 +6,7 @@ import { useDefaults } from '../useDefaults.js';
 // Constants
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = 'recipecalc_defaults';
+const STORAGE_KEY = 'recipepricer_defaults';
 
 // ---------------------------------------------------------------------------
 // localStorage mock

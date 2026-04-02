@@ -119,7 +119,7 @@ Codex 独立冷读评估（未看对话，只收到结构化摘要）：
 **Wizard 布局（非堆叠卡片）**:
 ```
 ┌──────────────────────────────────────────────┐
-│ RecipeCalc    ● ─── ● ─── ○ ─── ○    Step 2 │  ← 持久 header + 步骤指示器
+│ RecipePricer    ● ─── ● ─── ○ ─── ○    Step 2 │  ← 持久 header + 步骤指示器
 ├──────────────────────────────────────────────┤
 │                                              │
 │   [主工作区域 — 无卡片边框]                   │  ← 内容直接在白色背景上
@@ -168,7 +168,7 @@ Codex 独立冷读评估（未看对话，只收到结构化摘要）：
     "For [Home Bakers]"
     [Home Bakers] 同步切换：Home Bakers → Cottage Food Sellers → Food Truck Owners → Small Bakeries → Caterers
   → 轮播间隔：3 秒/项
-  → 产品名 "RecipeCalc" 在左上角或标题上方，始终可见
+  → 产品名 "RecipePricer" 在左上角或标题上方，始终可见
   → CTA: "Calculate your true cost — free" → 进入 Step 1
   → 视觉锚点：一张高质量的厨房/烘焙俯视照片（面粉撒落的柜台、正在称量食材的手）
     作为 hero 的背景/侧图，配合「$8.50 → $52.50」对比预览的缩略版。
@@ -290,7 +290,7 @@ MVP 不支持的单位（V2）：pinch, bunch, dash。V2 可扩展密度表到 1
 
 ```json
 {
-  "recipecalc_current": {
+  "recipepricer_current": {
     "version": 1,
     "step": 2,
     "recipe": {
@@ -318,10 +318,10 @@ MVP 不支持的单位（V2）：pinch, bunch, dash。V2 可扩展密度表到 1
       }
     }
   },
-  "recipecalc_recipes": [
+  "recipepricer_recipes": [
     { /* 同上 recipe 结构 + savedAt timestamp */ }
   ],
-  "recipecalc_license": {
+  "recipepricer_license": {
     "key": "xxx-xxx-xxx",
     "email": "baker@example.com",
     "validatedAt": "2026-03-26T12:00:00Z"

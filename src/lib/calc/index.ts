@@ -1,5 +1,5 @@
 /**
- * RecipeCalc cost calculation module.
+ * RecipePricer cost calculation module.
  *
  * Re-exports all types and functions for convenient imports.
  */

@@ -211,7 +211,7 @@ export default function WizardShell() {
         )}
 
         <header className="wizard-header">
-          <h1 className="wizard-header__title">RecipeCalc</h1>
+          <h1 className="wizard-header__title">RecipePricer</h1>
           <StepIndicator
             currentStep={currentStep}
             stepsCompleted={stepsCompleted}

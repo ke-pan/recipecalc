@@ -5,7 +5,18 @@ import type { UserDefaults } from '../types/pantry.js';
 // Constants
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = 'recipecalc_defaults';
+const STORAGE_KEY = 'recipepricer_defaults';
+
+function migrateStorageKey() {
+  try {
+    const old = localStorage.getItem('recipecalc_defaults');
+    if (old && !localStorage.getItem(STORAGE_KEY)) {
+      localStorage.setItem(STORAGE_KEY, old);
+      localStorage.removeItem('recipecalc_defaults');
+    }
+  } catch {}
+}
+migrateStorageKey();
 
 const DEFAULT_VALUES: UserDefaults = {
   hourlyRate: 0,

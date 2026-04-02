@@ -132,7 +132,7 @@ describe('WizardShell', () => {
 
   it('renders the wizard with header, content, and footer', () => {
     render(<WizardShell />);
-    expect(screen.getByText('RecipeCalc')).toBeInTheDocument();
+    expect(screen.getByText('RecipePricer')).toBeInTheDocument();
     expect(screen.getByTestId('step1')).toBeInTheDocument();
     expect(screen.getByText('Next')).toBeInTheDocument();
   });

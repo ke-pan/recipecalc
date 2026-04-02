@@ -15,8 +15,19 @@ export interface UseRecipePersistenceReturn {
   showResume: boolean;
 }
 
-const STORAGE_KEY = 'recipecalc_current';
+const STORAGE_KEY = 'recipepricer_current';
 const DEBOUNCE_MS = 500;
+
+function migrateStorageKey() {
+  try {
+    const old = localStorage.getItem('recipecalc_current');
+    if (old && !localStorage.getItem(STORAGE_KEY)) {
+      localStorage.setItem(STORAGE_KEY, old);
+      localStorage.removeItem('recipecalc_current');
+    }
+  } catch {}
+}
+migrateStorageKey();
 const CURRENT_VERSION = 1;
 
 /** Safely run a localStorage operation, returning undefined on failure. */

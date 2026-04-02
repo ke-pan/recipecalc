@@ -41,9 +41,9 @@ const mockLocalStorage = {
 // ---------------------------------------------------------------------------
 
 const LICENSE_KEY = 'recipecalc_license';
-const RECIPES_KEY = 'recipecalc_recipes';
-const PANTRY_KEY = 'recipecalc_pantry';
-const DEFAULTS_KEY = 'recipecalc_defaults';
+const RECIPES_KEY = 'recipepricer_recipes';
+const PANTRY_KEY = 'recipepricer_pantry';
+const DEFAULTS_KEY = 'recipepricer_defaults';
 
 function makeLicenseJSON(): string {
   return JSON.stringify({

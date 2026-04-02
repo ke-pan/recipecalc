@@ -1,5 +1,5 @@
 /**
- * Unit conversion engine for RecipeCalc.
+ * Unit conversion engine for RecipePricer.
  * Pure logic — no UI dependencies.
  */
 

@@ -1,5 +1,5 @@
 /**
- * Unit conversion engine for RecipeCalc.
+ * Unit conversion engine for RecipePricer.
  *
  * - Unit input is case-insensitive ('Cup' === 'cup' === 'CUP')
  * - Zero amount always returns 0

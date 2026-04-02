@@ -1,4 +1,4 @@
-# RecipeCalc
+# RecipePricer
 
 Recipe cost calculator / pricing therapist for home bakers. Astro + React islands, deployed on Cloudflare.
 

@@ -44,8 +44,19 @@ export interface UseRecipesReturn {
 // Constants
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = 'recipecalc_recipes';
+const STORAGE_KEY = 'recipepricer_recipes';
 const CURRENT_VERSION = 1;
+
+function migrateStorageKey() {
+  try {
+    const old = localStorage.getItem('recipecalc_recipes');
+    if (old && !localStorage.getItem(STORAGE_KEY)) {
+      localStorage.setItem(STORAGE_KEY, old);
+      localStorage.removeItem('recipecalc_recipes');
+    }
+  } catch {}
+}
+migrateStorageKey();
 
 // ---------------------------------------------------------------------------
 // Helpers (same safe-storage pattern as useRecipePersistence)

@@ -661,7 +661,7 @@ function PantryContent() {
         {/* Header */}
         <div className="pantry__header">
           <div className="pantry__header-top">
-            <a href="/" className="pantry__logo">RecipeCalc</a>
+            <a href="/" className="pantry__logo">RecipePricer</a>
             <nav className="pantry__nav">
               <a href="/calculator" className="pantry__nav-link">Calculator</a>
             </nav>

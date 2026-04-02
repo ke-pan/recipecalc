@@ -32,9 +32,9 @@ describe('HeroCarousel', () => {
     expect(screen.getByTestId('title-word')).toHaveTextContent('cookies');
   });
 
-  it('renders the product name "RecipeCalc"', () => {
+  it('renders the product name "RecipePricer"', () => {
     render(<HeroCarousel />);
-    expect(screen.getByText('RecipeCalc')).toBeInTheDocument();
+    expect(screen.getByText('RecipePricer')).toBeInTheDocument();
   });
 
   it('renders the SEO H1 with "Recipe Cost Calculator"', () => {
@@ -114,7 +114,7 @@ describe('HeroCarousel', () => {
 
   it('has correct aria-label on the hero section', () => {
     render(<HeroCarousel />);
-    expect(screen.getByLabelText('RecipeCalc hero')).toBeInTheDocument();
+    expect(screen.getByLabelText('RecipePricer hero')).toBeInTheDocument();
   });
 
   it('exports the expected word array', () => {

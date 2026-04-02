@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const HINT_KEY = 'recipecalc_license_hint';
+const HINT_KEY = 'recipepricer_license_hint';
 const OLD_KEY = 'recipecalc_license';
 
 function wrapper({ children }: { children: ReactNode }) {

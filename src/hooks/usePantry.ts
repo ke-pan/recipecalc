@@ -6,7 +6,18 @@ import { readRecipes } from './useRecipes.js';
 // Constants
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = 'recipecalc_pantry';
+const STORAGE_KEY = 'recipepricer_pantry';
+
+function migrateStorageKey() {
+  try {
+    const old = localStorage.getItem('recipecalc_pantry');
+    if (old && !localStorage.getItem(STORAGE_KEY)) {
+      localStorage.setItem(STORAGE_KEY, old);
+      localStorage.removeItem('recipecalc_pantry');
+    }
+  } catch {}
+}
+migrateStorageKey();
 
 // ---------------------------------------------------------------------------
 // Helpers (same safe-storage pattern as useRecipes)

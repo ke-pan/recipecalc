@@ -88,9 +88,9 @@ export default function HeroCarousel() {
   const inlineStyle = !reducedMotion && phase === 'exiting' ? EXIT_STYLE : undefined;
 
   return (
-    <section className="hero" aria-label="RecipeCalc hero">
+    <section className="hero" aria-label="RecipePricer hero">
       <div className="hero__content">
-        <p className="hero__brand">RecipeCalc</p>
+        <p className="hero__brand">RecipePricer</p>
 
         <h1 className="hero__title">Recipe Cost{'\n'}Calculator</h1>
 

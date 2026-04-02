@@ -15,9 +15,9 @@
 
 ## 1. Background & Motivation
 
-详见 `docs/design-recipecalc-pricing-therapist.md`。
+详见 `docs/design-recipepricer-pricing-therapist.md`。
 
-家庭烘焙师需要为产品定价，但害怕面对真实成本。RecipeCalc 是**定价信心工具**：引导式 4 步流程，核心时刻 = "食材成本 vs 真实成本" 视觉对比 reveal。
+家庭烘焙师需要为产品定价，但害怕面对真实成本。RecipePricer 是**定价信心工具**：引导式 4 步流程，核心时刻 = "食材成本 vs 真实成本" 视觉对比 reveal。
 
 **本 RFC 范围**: 纯免费计算器 MVP —— 验证核心体验（wizard + reveal），不含支付、licensing、保存、导出。所有功能对所有用户完全开放。目标是最快上线，投放社区获取真实用户反馈。
 
@@ -55,12 +55,12 @@
 - **框架**: Astro + React islands，Cloudflare Workers + Assets 部署
 - **UI**: React island（`client:load`）实现 wizard，Astro 静态页处理首屏 hero
 - **状态**: React useReducer 管理 wizard 状态，容器组件管理步骤切换和动画
-- **持久化**: localStorage 仅存 `recipecalc_current`（当前编辑进度），无配方库、无 license
+- **持久化**: localStorage 仅存 `recipepricer_current`（当前编辑进度），无配方库、无 license
 - **样式**: 遵循 DESIGN.md 设计系统（Fraunces/DM Sans/Geist Mono，parchment 调色板）
 
 ### 5.2 Data Model
 
-localStorage 单 key `recipecalc_current`:
+localStorage 单 key `recipepricer_current`:
 ```json
 {
   "version": 1,

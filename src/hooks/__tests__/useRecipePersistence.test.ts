@@ -7,7 +7,7 @@ import type { Recipe } from '../../lib/calc/types.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = 'recipecalc_current';
+const STORAGE_KEY = 'recipepricer_current';
 
 function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
   return {

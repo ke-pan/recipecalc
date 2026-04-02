@@ -9,8 +9,8 @@ import type { Recipe } from '../../lib/calc/types.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const PANTRY_KEY = 'recipecalc_pantry';
-const RECIPES_KEY = 'recipecalc_recipes';
+const PANTRY_KEY = 'recipepricer_pantry';
+const RECIPES_KEY = 'recipepricer_recipes';
 
 function makePantryInput(
   overrides: Partial<Omit<PantryItem, 'id' | 'updatedAt'>> = {},

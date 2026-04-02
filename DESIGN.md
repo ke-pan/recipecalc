@@ -1,4 +1,4 @@
-# Design System — RecipeCalc
+# Design System — RecipePricer
 
 ## Product Context
 - **What this is:** A "pricing therapist" for home bakers — a guided wizard that reveals the gap between ingredient cost and true cost, then recommends a selling price

@@ -2,7 +2,7 @@ import '@testing-library/jest-dom';
 import { beforeEach } from 'vitest';
 import { _resetSessionCache } from '../contexts/LicenseContext';
 
-const HINT_KEY = 'recipecalc_license_hint';
+const HINT_KEY = 'recipepricer_license_hint';
 const OLD_KEY = 'recipecalc_license';
 
 beforeEach(() => {

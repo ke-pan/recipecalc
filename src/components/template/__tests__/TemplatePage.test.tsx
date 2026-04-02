@@ -41,8 +41,8 @@ const mockLocalStorage = {
 // ---------------------------------------------------------------------------
 
 const LICENSE_KEY = 'recipecalc_license';
-const RECIPES_KEY = 'recipecalc_recipes';
-const PANTRY_KEY = 'recipecalc_pantry';
+const RECIPES_KEY = 'recipepricer_recipes';
+const PANTRY_KEY = 'recipepricer_pantry';
 
 function makeLicenseJSON(): string {
   return JSON.stringify({
@@ -607,12 +607,12 @@ describe('TemplatePage', () => {
     expect(costCells[0].textContent).toBe('$2.10');
   });
 
-  // ---- RecipeCalc logo ----
+  // ---- RecipePricer logo ----
 
-  it('renders RecipeCalc logo linking to home', () => {
+  it('renders RecipePricer logo linking to home', () => {
     store[LICENSE_KEY] = makeLicenseJSON();
     render(<TemplatePage />);
-    const logo = screen.getByText('RecipeCalc');
+    const logo = screen.getByText('RecipePricer');
     expect(logo.closest('a')).toHaveAttribute('href', '/');
   });
 });

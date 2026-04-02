@@ -30,8 +30,8 @@ vi.mock('../../../hooks/useRecipes.js', () => ({
 // ---------------------------------------------------------------------------
 
 const LICENSE_KEY = 'recipecalc_license';
-const PANTRY_KEY = 'recipecalc_pantry';
-const DEFAULTS_KEY = 'recipecalc_defaults';
+const PANTRY_KEY = 'recipepricer_pantry';
+const DEFAULTS_KEY = 'recipepricer_defaults';
 
 let store: Record<string, string> = {};
 
@@ -437,7 +437,7 @@ describe('PantryPage', () => {
   it('has a logo linking to home', () => {
     setupWithLicense();
     render(<PantryPage />);
-    const logo = screen.getByText('RecipeCalc');
+    const logo = screen.getByText('RecipePricer');
     expect(logo.closest('a')).toHaveAttribute('href', '/');
   });
 

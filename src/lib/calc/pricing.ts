@@ -1,5 +1,5 @@
 /**
- * Cost calculation and pricing logic for RecipeCalc.
+ * Cost calculation and pricing logic for RecipePricer.
  *
  * Pure functions — no side effects, no UI dependencies.
  * All monetary outputs are rounded to 2 decimal places (cent precision).

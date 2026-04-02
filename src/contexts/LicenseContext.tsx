@@ -46,8 +46,20 @@ type LicenseContextValue = LicenseState & LicenseActions;
 // localStorage hint (UI only — not a security boundary)
 // ---------------------------------------------------------------------------
 
-const HINT_KEY = 'recipecalc_license_hint';
+const HINT_KEY = 'recipepricer_license_hint';
 const OLD_KEY = 'recipecalc_license';
+
+// Migrate from previous brand's hint key
+function migrateHintKey() {
+  try {
+    const old = localStorage.getItem('recipecalc_license_hint');
+    if (old && !localStorage.getItem(HINT_KEY)) {
+      localStorage.setItem(HINT_KEY, old);
+      localStorage.removeItem('recipecalc_license_hint');
+    }
+  } catch {}
+}
+migrateHintKey();
 
 function readHint(): { keyPrefix: string } | null {
   try {

@@ -483,7 +483,7 @@ function TemplateContent() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'recipecalc-recipes.json';
+    a.download = 'recipepricer-recipes.json';
     a.click();
     URL.revokeObjectURL(url);
     trackEvent(EVENTS.EXPORT_JSON, { count: String(recipes.length) });
@@ -527,7 +527,7 @@ function TemplateContent() {
         {/* Header */}
         <header className="template__header">
           <h1 className="template__title">Recipes</h1>
-          <a href="/" className="template__logo">RecipeCalc</a>
+          <a href="/" className="template__logo">RecipePricer</a>
         </header>
 
         {/* Toolbar */}

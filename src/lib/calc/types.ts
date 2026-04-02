@@ -1,5 +1,5 @@
 /**
- * Core types for RecipeCalc cost calculation and pricing.
+ * Core types for RecipePricer cost calculation and pricing.
  *
  * These types model the data flowing through the 4-step wizard:
  *   Step 1: Recipe info (name, quantity, batch time)

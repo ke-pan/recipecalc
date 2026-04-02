@@ -206,7 +206,7 @@ export default function ActivatePage() {
       <div className="activate">
         <div className="activate__card">
           <a href="/" className="activate__logo">
-            RecipeCalc
+            RecipePricer
           </a>
           <ActivateForm />
         </div>

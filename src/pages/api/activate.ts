@@ -12,7 +12,7 @@ import { getEnv, jsonResponse } from '../../lib/server/env';
 export const prerender = false;
 
 const LS_API = 'https://api.lemonsqueezy.com/v1/licenses/activate';
-const INSTANCE_NAME = 'recipecalc-web';
+const INSTANCE_NAME = 'recipepricer-web';
 const MAX_KEY_LENGTH = 256;
 
 export const POST: APIRoute = async ({ request, cookies }) => {
