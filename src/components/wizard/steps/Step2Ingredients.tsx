@@ -12,6 +12,9 @@ import {
 import { calculateIngredientCost, roundCents } from '../../../lib/calc/pricing.js';
 import { formatCurrency } from '../../../lib/format.js';
 import { WEIGHT_UNITS, VOLUME_UNITS, COUNT_UNITS } from '../../../lib/units/conversion-factors.js';
+import { useLicense } from '../../../contexts/LicenseContext.js';
+import { usePantry } from '../../../hooks/usePantry.js';
+import type { PantryItem } from '../../../types/pantry.js';
 import './step2.css';
 
 interface Step2Props {
@@ -30,6 +33,12 @@ interface IngredientForm {
   usedUnit: string;
   wastePercent: string;
   showWaste: boolean;
+  /** When selected from Pantry, the PantryItem's id */
+  pantryId: string | null;
+  /** Stable semantic key for density lookups */
+  ingredientKey: string;
+  /** Whether the user wants to save this ingredient to Pantry */
+  saveToPantry: boolean;
 }
 
 const EMPTY_FORM: IngredientForm = {
@@ -42,9 +51,35 @@ const EMPTY_FORM: IngredientForm = {
   usedUnit: 'lb',
   wastePercent: '0',
   showWaste: false,
+  pantryId: null,
+  ingredientKey: '',
+  saveToPantry: false,
 };
 
 const ALL_UNITS = [...WEIGHT_UNITS, ...VOLUME_UNITS, ...COUNT_UNITS];
+
+/** Slugify a name for use as ingredientKey. */
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/** A unified autocomplete suggestion — either from Pantry or common-ingredients. */
+interface AutocompleteSuggestion {
+  /** Display name */
+  name: string;
+  /** 'pantry' or 'common' */
+  source: 'pantry' | 'common';
+  /** The ingredientKey for density lookups */
+  ingredientKey: string;
+  /** The CommonIngredient (if source=common) */
+  commonIngredient?: CommonIngredient;
+  /** The PantryItem (if source=pantry) */
+  pantryItem?: PantryItem;
+}
 
 /** Get all units that can convert to/from the given unit, including cross-category if ingredient supports it */
 function getAvailableUnits(unit: string, ingredientId?: string): string[] {
@@ -132,6 +167,8 @@ function formToIngredient(form: IngredientForm, existingId?: string): Ingredient
     usedAmount, form.usedUnit, form.purchaseUnit, form.ingredientId,
   ) ?? usedAmount;
 
+  const ingredientKey = form.ingredientKey || form.ingredientId || slugify(form.name);
+
   return {
     id: existingId || generateId(),
     name: form.name.trim(),
@@ -141,6 +178,8 @@ function formToIngredient(form: IngredientForm, existingId?: string): Ingredient
     usedAmount: convertedUsed,
     usedUnit: form.purchaseUnit,
     wastePercent: parseFloat(form.wastePercent) || 0,
+    pantryId: form.pantryId || undefined,
+    ingredientKey,
   };
 }
 
@@ -161,6 +200,9 @@ function ingredientToForm(ing: Ingredient): IngredientForm {
     usedUnit: ing.usedUnit,
     wastePercent: String(ing.wastePercent),
     showWaste: ing.wastePercent > 0,
+    pantryId: ing.pantryId || null,
+    ingredientKey: ing.ingredientKey || common?.id || '',
+    saveToPantry: false,
   };
 }
 
@@ -186,17 +228,51 @@ export default function Step2Ingredients({ recipe, onIngredientsChange, onValidC
   const nameInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<HTMLUListElement>(null);
 
+  // Pantry + license
+  const { isUnlocked } = useLicense();
+  const { pantry, add: pantryAdd, findByName: pantryFindByName } = usePantry();
+
   useEffect(() => {
     onValidChange(ingredients.length > 0);
   }, [ingredients.length, onValidChange]);
 
-  const filteredSuggestions = useMemo(() => {
+  const filteredSuggestions = useMemo((): AutocompleteSuggestion[] => {
     const query = form.name.trim().toLowerCase();
     if (query.length === 0) return [];
-    return COMMON_INGREDIENTS.filter((item) =>
-      item.name.toLowerCase().includes(query),
-    ).slice(0, 8);
-  }, [form.name]);
+
+    const results: AutocompleteSuggestion[] = [];
+    const seenNames = new Set<string>();
+
+    // For paid users: add Pantry items first (prioritized)
+    if (isUnlocked) {
+      for (const item of pantry) {
+        if (item.name.toLowerCase().includes(query) && !seenNames.has(item.name.toLowerCase())) {
+          seenNames.add(item.name.toLowerCase());
+          results.push({
+            name: item.name,
+            source: 'pantry',
+            ingredientKey: item.ingredientKey,
+            pantryItem: item,
+          });
+        }
+      }
+    }
+
+    // Add common ingredients (dedup against pantry items)
+    for (const item of COMMON_INGREDIENTS) {
+      if (item.name.toLowerCase().includes(query) && !seenNames.has(item.name.toLowerCase())) {
+        seenNames.add(item.name.toLowerCase());
+        results.push({
+          name: item.name,
+          source: 'common',
+          ingredientKey: item.id,
+          commonIngredient: item,
+        });
+      }
+    }
+
+    return results.slice(0, 8);
+  }, [form.name, isUnlocked, pantry]);
 
   const usedUnits = useMemo(() => {
     if (form.ingredientId) {
@@ -216,6 +292,22 @@ export default function Step2Ingredients({ recipe, onIngredientsChange, onValidC
     return roundCents(ingredients.reduce((sum, ing) => sum + safeIngredientCost(ing), 0));
   }, [ingredients]);
 
+  // Show "Save to My Pantry" when: paid user, ingredient NOT from pantry,
+  // name not already in pantry, and price is filled
+  const showSaveToPantry = useMemo(() => {
+    if (!isUnlocked) return false;
+    if (form.pantryId) return false;
+    const name = form.name.trim();
+    if (name.length === 0) return false;
+    const price = parseFloat(form.purchasePrice);
+    if (isNaN(price) || price < 0) return false;
+    const amount = parseFloat(form.purchaseAmount);
+    if (isNaN(amount) || amount <= 0) return false;
+    // Check if already in pantry
+    if (pantryFindByName(name)) return false;
+    return true;
+  }, [isUnlocked, form.pantryId, form.name, form.purchasePrice, form.purchaseAmount, pantryFindByName]);
+
   function resetForm(open: boolean): void {
     setForm(EMPTY_FORM);
     setEditingId(null);
@@ -230,17 +322,35 @@ export default function Step2Ingredients({ recipe, onIngredientsChange, onValidC
   const handleAdd = useCallback(() => {
     if (!canAdd) return;
 
+    const ingredient = formToIngredient(form, editingId || undefined);
+
+    // Save to Pantry if checkbox is checked
+    if (form.saveToPantry && pantryAdd) {
+      const ingredientKey = form.ingredientKey || form.ingredientId || slugify(form.name);
+      const created = pantryAdd({
+        name: form.name.trim(),
+        ingredientKey,
+        purchaseUnit: form.purchaseUnit,
+        purchaseAmount: parseFloat(form.purchaseAmount),
+        purchasePrice: parseFloat(form.purchasePrice),
+      });
+      // If pantry item was created, link the ingredient to it
+      if (created) {
+        ingredient.pantryId = created.id;
+      }
+    }
+
     if (editingId) {
       const updated = ingredients.map((ing) =>
-        ing.id === editingId ? formToIngredient(form, editingId) : ing,
+        ing.id === editingId ? ingredient : ing,
       );
       onIngredientsChange(updated);
     } else {
-      onIngredientsChange([...ingredients, formToIngredient(form)]);
+      onIngredientsChange([...ingredients, ingredient]);
     }
 
     resetForm(false);
-  }, [canAdd, editingId, form, ingredients, onIngredientsChange]);
+  }, [canAdd, editingId, form, ingredients, onIngredientsChange, pantryAdd]);
 
   const handleEdit = useCallback((ing: Ingredient) => {
     setForm(ingredientToForm(ing));
@@ -254,19 +364,47 @@ export default function Step2Ingredients({ recipe, onIngredientsChange, onValidC
   }, [ingredients, onIngredientsChange]);
 
   const handleNameChange = useCallback((value: string) => {
-    setForm((prev) => ({ ...prev, name: value, ingredientId: '' }));
+    setForm((prev) => ({
+      ...prev,
+      name: value,
+      ingredientId: '',
+      pantryId: null,
+      ingredientKey: '',
+      saveToPantry: false,
+    }));
     setAutocompleteOpen(value.trim().length > 0);
     setActiveIndex(-1);
   }, []);
 
-  const handleSelectSuggestion = useCallback((item: CommonIngredient) => {
-    setForm((prev) => ({
-      ...prev,
-      name: item.name,
-      ingredientId: item.id,
-      purchaseUnit: item.defaultPurchaseUnit,
-      usedUnit: item.defaultUsedUnit,
-    }));
+  const handleSelectSuggestion = useCallback((item: AutocompleteSuggestion) => {
+    if (item.source === 'pantry' && item.pantryItem) {
+      // Pantry item: autofill purchase fields + set pantryId + ingredientKey
+      const p = item.pantryItem;
+      setForm((prev) => ({
+        ...prev,
+        name: p.name,
+        ingredientId: p.ingredientKey,
+        purchaseAmount: String(p.purchaseAmount),
+        purchaseUnit: p.purchaseUnit,
+        purchasePrice: String(p.purchasePrice),
+        pantryId: p.id,
+        ingredientKey: p.ingredientKey,
+        saveToPantry: false,
+      }));
+    } else if (item.commonIngredient) {
+      // Common ingredient: fill name + default units
+      const c = item.commonIngredient;
+      setForm((prev) => ({
+        ...prev,
+        name: c.name,
+        ingredientId: c.id,
+        purchaseUnit: c.defaultPurchaseUnit,
+        usedUnit: c.defaultUsedUnit,
+        pantryId: null,
+        ingredientKey: c.id,
+        saveToPantry: false,
+      }));
+    }
     setAutocompleteOpen(false);
     setActiveIndex(-1);
   }, []);
@@ -420,7 +558,7 @@ export default function Step2Ingredients({ recipe, onIngredientsChange, onValidC
               >
                 {filteredSuggestions.map((item, idx) => (
                   <li
-                    key={item.id}
+                    key={`${item.source}-${item.ingredientKey || item.name}`}
                     id={`suggestion-${idx}`}
                     className={`step2__autocomplete-item${
                       idx === activeIndex ? ' step2__autocomplete-item--active' : ''
@@ -429,7 +567,12 @@ export default function Step2Ingredients({ recipe, onIngredientsChange, onValidC
                     aria-selected={idx === activeIndex}
                     onMouseDown={() => handleSelectSuggestion(item)}
                   >
-                    {item.name}
+                    <span className="step2__autocomplete-name">{item.name}</span>
+                    {item.source === 'pantry' && (
+                      <span className="step2__pantry-badge" data-testid="pantry-badge">
+                        My Pantry
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -576,6 +719,21 @@ export default function Step2Ingredients({ recipe, onIngredientsChange, onValidC
             <div className="step2__cost-preview" data-testid="cost-preview">
               Cost for this recipe: {formatCurrency(costPreview)}
             </div>
+          )}
+
+          {/* Save to My Pantry checkbox */}
+          {showSaveToPantry && (
+            <label className="step2__save-pantry" data-testid="save-to-pantry">
+              <input
+                type="checkbox"
+                className="step2__save-pantry-checkbox"
+                checked={form.saveToPantry}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, saveToPantry: e.target.checked }))
+                }
+              />
+              <span className="step2__save-pantry-label">Save to My Pantry</span>
+            </label>
           )}
 
           {/* Actions */}

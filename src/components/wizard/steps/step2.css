@@ -211,9 +211,63 @@
   transition: background-color var(--duration-micro) var(--ease-enter);
 }
 
+.step2__autocomplete-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+}
+
+.step2__autocomplete-name {
+  flex: 1;
+  min-width: 0;
+}
+
 .step2__autocomplete-item:hover,
 .step2__autocomplete-item--active {
   background-color: var(--bg);
+}
+
+/* Pantry badge in autocomplete */
+.step2__pantry-badge {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--confidence);
+  background-color: rgba(78, 122, 93, 0.1);
+  border: 1px solid rgba(78, 122, 93, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-xs);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Save to My Pantry checkbox
+   -------------------------------------------------------------------------- */
+
+.step2__save-pantry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+  padding: var(--space-xs) 0;
+}
+
+.step2__save-pantry-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--confidence);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.step2__save-pantry-label {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--confidence);
+  font-weight: 500;
+  user-select: none;
 }
 
 /* --------------------------------------------------------------------------

@@ -1,8 +1,41 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, within, act, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import Step2Ingredients from '../Step2Ingredients';
 import type { Recipe, Ingredient } from '../../../../lib/calc/types';
+import type { PantryItem } from '../../../../types/pantry';
+
+// ---------------------------------------------------------------------------
+// Mocks — must come before component import
+// ---------------------------------------------------------------------------
+
+const mockUseLicense = vi.fn(() => ({
+  isUnlocked: false,
+  license: null,
+  activate: vi.fn(),
+  deactivate: vi.fn(),
+}));
+
+vi.mock('../../../../contexts/LicenseContext.js', () => ({
+  useLicense: () => mockUseLicense(),
+}));
+
+const mockPantryAdd = vi.fn();
+const mockPantryFindByName = vi.fn();
+const mockUsePantry = vi.fn(() => ({
+  pantry: [] as PantryItem[],
+  add: mockPantryAdd,
+  update: vi.fn(),
+  remove: vi.fn(),
+  findByName: mockPantryFindByName,
+  getReferencingRecipeCount: vi.fn(),
+}));
+
+vi.mock('../../../../hooks/usePantry.js', () => ({
+  usePantry: () => mockUsePantry(),
+}));
+
+// Now import the component (mocks are already in place)
+import Step2Ingredients from '../Step2Ingredients';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -35,6 +68,19 @@ function makeIngredient(overrides?: Partial<Ingredient>): Ingredient {
     usedAmount: 2,
     usedUnit: 'lb',
     wastePercent: 0,
+    ...overrides,
+  };
+}
+
+function makePantryItem(overrides?: Partial<PantryItem>): PantryItem {
+  return {
+    id: 'pantry-1',
+    name: 'Organic Flour',
+    ingredientKey: 'all-purpose-flour',
+    purchaseUnit: 'lb',
+    purchaseAmount: 10,
+    purchasePrice: 8.99,
+    updatedAt: '2025-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -106,7 +152,35 @@ describe('Step2Ingredients', () => {
   let user: ReturnType<typeof userEvent.setup>;
 
   beforeEach(() => {
-    user = userEvent.setup();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    // Default: free user, empty pantry
+    mockUseLicense.mockReturnValue({
+      isUnlocked: false,
+      license: null,
+      activate: vi.fn(),
+      deactivate: vi.fn(),
+    });
+    mockUsePantry.mockReturnValue({
+      pantry: [],
+      add: mockPantryAdd,
+      update: vi.fn(),
+      remove: vi.fn(),
+      findByName: mockPantryFindByName,
+      getReferencingRecipeCount: vi.fn(),
+    });
+    mockPantryAdd.mockReset();
+    mockPantryFindByName.mockReset();
+    mockPantryFindByName.mockReturnValue(undefined);
+  });
+
+  afterEach(() => {
+    // Flush any pending timers (e.g. handleNameBlur setTimeout) before teardown
+    act(() => {
+      vi.runAllTimers();
+    });
+    cleanup();
+    vi.useRealTimers();
   });
 
   // -------------------------------------------------------------------------
@@ -154,7 +228,7 @@ describe('Step2Ingredients', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 3. Autocomplete
+  // 3. Autocomplete (free user — common ingredients only)
   // -------------------------------------------------------------------------
 
   it('shows autocomplete suggestions when typing "flo"', async () => {
@@ -457,7 +531,7 @@ describe('Step2Ingredients', () => {
   // -------------------------------------------------------------------------
 
   it('form closes after adding ingredient', async () => {
-    const { onIngredientsChange } = renderStep2();
+    renderStep2();
     await fillIngredientForm(user);
     await user.click(screen.getByTestId('add-ingredient-btn'));
 
@@ -514,5 +588,338 @@ describe('Step2Ingredients', () => {
     expect(optionValues).toContain('lb');
     expect(optionValues).toContain('cup');
     expect(optionValues).toContain('each');
+  });
+
+  // -------------------------------------------------------------------------
+  // 17. ingredientKey persisted on all ingredients
+  // -------------------------------------------------------------------------
+
+  it('persists ingredientKey when adding a common ingredient', async () => {
+    const { onIngredientsChange } = renderStep2();
+    await user.click(screen.getByTestId('open-add-form-btn'));
+
+    // Select All-Purpose Flour from autocomplete
+    const nameInput = screen.getByLabelText('Ingredient Name');
+    await user.type(nameInput, 'All-Purpose');
+    fireEvent.mouseDown(screen.getByText('All-Purpose Flour'));
+
+    // Fill purchase info
+    const amountInput = document.getElementById('purchase-amount') as HTMLInputElement;
+    fireEvent.change(amountInput, { target: { value: '5' } });
+    const priceInput = document.getElementById('purchase-price') as HTMLInputElement;
+    fireEvent.change(priceInput, { target: { value: '4.99' } });
+    const usedInput = document.getElementById('used-amount') as HTMLInputElement;
+    fireEvent.change(usedInput, { target: { value: '2' } });
+
+    await user.click(screen.getByTestId('add-ingredient-btn'));
+
+    const added = onIngredientsChange.mock.calls[0][0] as Ingredient[];
+    expect(added[0].ingredientKey).toBe('all-purpose-flour');
+  });
+
+  it('generates slugified ingredientKey for manually typed ingredients', async () => {
+    const { onIngredientsChange } = renderStep2();
+    await fillIngredientForm(user, { name: 'My Custom Flour' });
+    await user.click(screen.getByTestId('add-ingredient-btn'));
+
+    const added = onIngredientsChange.mock.calls[0][0] as Ingredient[];
+    expect(added[0].ingredientKey).toBe('my-custom-flour');
+  });
+
+  // =========================================================================
+  // PAID USER — Pantry autocomplete
+  // =========================================================================
+
+  describe('paid user — Pantry autocomplete', () => {
+    const pantryFlour = makePantryItem({
+      id: 'pantry-flour',
+      name: 'Organic Flour',
+      ingredientKey: 'all-purpose-flour',
+      purchaseUnit: 'lb',
+      purchaseAmount: 10,
+      purchasePrice: 8.99,
+    });
+
+    const pantrySugar = makePantryItem({
+      id: 'pantry-sugar',
+      name: 'Brown Sugar',
+      ingredientKey: 'brown-sugar',
+      purchaseUnit: 'lb',
+      purchaseAmount: 4,
+      purchasePrice: 3.49,
+    });
+
+    beforeEach(() => {
+      mockUseLicense.mockReturnValue({
+        isUnlocked: true,
+        license: { key: 'test', instanceId: 'inst', activatedAt: '2025-01-01', storeId: 's', productId: 'p' },
+        activate: vi.fn(),
+        deactivate: vi.fn(),
+      });
+      mockUsePantry.mockReturnValue({
+        pantry: [pantryFlour, pantrySugar],
+        add: mockPantryAdd,
+        update: vi.fn(),
+        remove: vi.fn(),
+        findByName: mockPantryFindByName,
+        getReferencingRecipeCount: vi.fn(),
+      });
+    });
+
+    it('shows Pantry items first with "My Pantry" badge', async () => {
+      renderStep2();
+      await user.click(screen.getByTestId('open-add-form-btn'));
+
+      const nameInput = screen.getByLabelText('Ingredient Name');
+      await user.type(nameInput, 'flour');
+
+      const suggestions = screen.getByRole('listbox', { name: /ingredient suggestions/i });
+      const options = within(suggestions).getAllByRole('option');
+
+      // Pantry item "Organic Flour" should come first
+      expect(options[0]).toHaveTextContent('Organic Flour');
+      // It should have the badge
+      expect(within(options[0]).getByTestId('pantry-badge')).toHaveTextContent('My Pantry');
+
+      // Common ingredients should follow (without badge)
+      const commonOptions = options.filter(
+        (opt) => within(opt).queryByTestId('pantry-badge') === null,
+      );
+      expect(commonOptions.length).toBeGreaterThan(0);
+    });
+
+    it('deduplicates pantry items with same name as common ingredients', async () => {
+      renderStep2();
+      await user.click(screen.getByTestId('open-add-form-btn'));
+
+      const nameInput = screen.getByLabelText('Ingredient Name');
+      await user.type(nameInput, 'Brown Sugar');
+
+      const suggestions = screen.getByRole('listbox', { name: /ingredient suggestions/i });
+      const brownSugarItems = within(suggestions)
+        .getAllByRole('option')
+        .filter((opt) => opt.textContent?.includes('Brown Sugar'));
+
+      // Should only show pantry version (pantry takes priority, dedup by name)
+      expect(brownSugarItems).toHaveLength(1);
+      expect(within(brownSugarItems[0]).getByTestId('pantry-badge')).toBeInTheDocument();
+    });
+
+    it('auto-fills purchase fields when selecting a Pantry item', async () => {
+      renderStep2();
+      await user.click(screen.getByTestId('open-add-form-btn'));
+
+      const nameInput = screen.getByLabelText('Ingredient Name');
+      await user.type(nameInput, 'Organic');
+
+      // Select the pantry item
+      fireEvent.mouseDown(screen.getByText('Organic Flour'));
+
+      // Name should be filled
+      expect(nameInput).toHaveValue('Organic Flour');
+
+      // Purchase fields should be auto-filled from pantry
+      expect(document.getElementById('purchase-amount')).toHaveValue(10);
+      expect(screen.getByLabelText('Unit', { selector: '#purchase-unit' })).toHaveValue('lb');
+      expect(document.getElementById('purchase-price')).toHaveValue(8.99);
+    });
+
+    it('sets pantryId and ingredientKey when selecting a Pantry item and adding', async () => {
+      const { onIngredientsChange } = renderStep2();
+      await user.click(screen.getByTestId('open-add-form-btn'));
+
+      const nameInput = screen.getByLabelText('Ingredient Name');
+      await user.type(nameInput, 'Organic');
+      fireEvent.mouseDown(screen.getByText('Organic Flour'));
+
+      // Fill used amount
+      const usedInput = document.getElementById('used-amount') as HTMLInputElement;
+      fireEvent.change(usedInput, { target: { value: '3' } });
+
+      await user.click(screen.getByTestId('add-ingredient-btn'));
+
+      const added = onIngredientsChange.mock.calls[0][0] as Ingredient[];
+      expect(added[0].pantryId).toBe('pantry-flour');
+      expect(added[0].ingredientKey).toBe('all-purpose-flour');
+    });
+
+    it('does not show Pantry items for free users', async () => {
+      // Override to free user
+      mockUseLicense.mockReturnValue({
+        isUnlocked: false,
+        license: null,
+        activate: vi.fn(),
+        deactivate: vi.fn(),
+      });
+
+      renderStep2();
+      await user.click(screen.getByTestId('open-add-form-btn'));
+
+      const nameInput = screen.getByLabelText('Ingredient Name');
+      await user.type(nameInput, 'Organic');
+
+      // Should not find "Organic Flour" (it's only in pantry)
+      expect(screen.queryByText('Organic Flour')).not.toBeInTheDocument();
+    });
+  });
+
+  // =========================================================================
+  // PAID USER — "Save to My Pantry" checkbox
+  // =========================================================================
+
+  describe('paid user — Save to My Pantry', () => {
+    beforeEach(() => {
+      mockUseLicense.mockReturnValue({
+        isUnlocked: true,
+        license: { key: 'test', instanceId: 'inst', activatedAt: '2025-01-01', storeId: 's', productId: 'p' },
+        activate: vi.fn(),
+        deactivate: vi.fn(),
+      });
+      mockUsePantry.mockReturnValue({
+        pantry: [],
+        add: mockPantryAdd,
+        update: vi.fn(),
+        remove: vi.fn(),
+        findByName: mockPantryFindByName,
+        getReferencingRecipeCount: vi.fn(),
+      });
+      mockPantryFindByName.mockReturnValue(undefined);
+    });
+
+    it('shows "Save to My Pantry" checkbox for non-pantry ingredients with price filled', async () => {
+      renderStep2();
+      await fillIngredientForm(user, {
+        name: 'Custom Ingredient',
+        purchaseAmount: '5',
+        purchasePrice: '10',
+        usedAmount: '2',
+      });
+
+      expect(screen.getByTestId('save-to-pantry')).toBeInTheDocument();
+      expect(screen.getByText('Save to My Pantry')).toBeInTheDocument();
+    });
+
+    it('does not show "Save to My Pantry" for free users', async () => {
+      mockUseLicense.mockReturnValue({
+        isUnlocked: false,
+        license: null,
+        activate: vi.fn(),
+        deactivate: vi.fn(),
+      });
+
+      renderStep2();
+      await fillIngredientForm(user, {
+        name: 'Custom Ingredient',
+        purchaseAmount: '5',
+        purchasePrice: '10',
+        usedAmount: '2',
+      });
+
+      expect(screen.queryByTestId('save-to-pantry')).not.toBeInTheDocument();
+    });
+
+    it('does not show "Save to My Pantry" when ingredient is already in Pantry', async () => {
+      mockPantryFindByName.mockReturnValue(makePantryItem({ name: 'Custom Ingredient' }));
+
+      renderStep2();
+      await fillIngredientForm(user, {
+        name: 'Custom Ingredient',
+        purchaseAmount: '5',
+        purchasePrice: '10',
+        usedAmount: '2',
+      });
+
+      expect(screen.queryByTestId('save-to-pantry')).not.toBeInTheDocument();
+    });
+
+    it('calls pantryAdd when checkbox is checked and ingredient is added', async () => {
+      const createdPantryItem = makePantryItem({
+        id: 'new-pantry-id',
+        name: 'Custom Ingredient',
+        ingredientKey: 'custom-ingredient',
+      });
+      mockPantryAdd.mockReturnValue(createdPantryItem);
+
+      const { onIngredientsChange } = renderStep2();
+      await fillIngredientForm(user, {
+        name: 'Custom Ingredient',
+        purchaseAmount: '5',
+        purchasePrice: '10',
+        usedAmount: '2',
+      });
+
+      // Check the "Save to My Pantry" checkbox
+      const checkbox = screen.getByTestId('save-to-pantry').querySelector('input[type="checkbox"]')!;
+      await user.click(checkbox);
+
+      // Add the ingredient
+      await user.click(screen.getByTestId('add-ingredient-btn'));
+
+      // pantryAdd should be called with the correct data
+      expect(mockPantryAdd).toHaveBeenCalledTimes(1);
+      expect(mockPantryAdd).toHaveBeenCalledWith({
+        name: 'Custom Ingredient',
+        ingredientKey: 'custom-ingredient',
+        purchaseUnit: 'lb',
+        purchaseAmount: 5,
+        purchasePrice: 10,
+      });
+
+      // The ingredient should be linked to the pantry item
+      const added = onIngredientsChange.mock.calls[0][0] as Ingredient[];
+      expect(added[0].pantryId).toBe('new-pantry-id');
+    });
+
+    it('does not call pantryAdd when checkbox is unchecked', async () => {
+      const { onIngredientsChange } = renderStep2();
+      await fillIngredientForm(user, {
+        name: 'Custom Ingredient',
+        purchaseAmount: '5',
+        purchasePrice: '10',
+        usedAmount: '2',
+      });
+
+      // Don't check the checkbox, just add
+      await user.click(screen.getByTestId('add-ingredient-btn'));
+
+      expect(mockPantryAdd).not.toHaveBeenCalled();
+
+      const added = onIngredientsChange.mock.calls[0][0] as Ingredient[];
+      expect(added[0].pantryId).toBeUndefined();
+    });
+
+    it('does not show checkbox when selecting a Pantry item (already in pantry)', async () => {
+      const pantryItem = makePantryItem({
+        id: 'pantry-flour',
+        name: 'Organic Flour',
+        ingredientKey: 'all-purpose-flour',
+        purchaseUnit: 'lb',
+        purchaseAmount: 10,
+        purchasePrice: 8.99,
+      });
+
+      mockUsePantry.mockReturnValue({
+        pantry: [pantryItem],
+        add: mockPantryAdd,
+        update: vi.fn(),
+        remove: vi.fn(),
+        findByName: mockPantryFindByName,
+        getReferencingRecipeCount: vi.fn(),
+      });
+
+      renderStep2();
+      await user.click(screen.getByTestId('open-add-form-btn'));
+
+      const nameInput = screen.getByLabelText('Ingredient Name');
+      await user.type(nameInput, 'Organic');
+      fireEvent.mouseDown(screen.getByText('Organic Flour'));
+
+      // Fill used amount to make form complete
+      const usedInput = document.getElementById('used-amount') as HTMLInputElement;
+      fireEvent.change(usedInput, { target: { value: '3' } });
+
+      // Checkbox should NOT appear because the item came from Pantry
+      expect(screen.queryByTestId('save-to-pantry')).not.toBeInTheDocument();
+    });
   });
 });
