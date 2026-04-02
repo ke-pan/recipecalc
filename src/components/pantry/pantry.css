@@ -1,0 +1,467 @@
+/* ==========================================================================
+   Pantry Page — /pantry
+   Source of truth: DESIGN.md
+   ========================================================================== */
+
+.pantry {
+  min-height: 100vh;
+  padding: var(--space-lg) var(--space-md);
+}
+
+.pantry__container {
+  width: 100%;
+  max-width: var(--max-content-width);
+  margin-inline: auto;
+}
+
+/* --------------------------------------------------------------------------
+   Header
+   -------------------------------------------------------------------------- */
+
+.pantry__header {
+  margin-bottom: var(--space-xl);
+}
+
+.pantry__header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+}
+
+.pantry__logo {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.pantry__nav {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.pantry__nav-link {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--duration-micro) var(--ease-enter);
+}
+
+.pantry__nav-link:hover {
+  color: var(--accent);
+}
+
+.pantry__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-2xl);
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.pantry__subtitle {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Error toast
+   -------------------------------------------------------------------------- */
+
+.pantry__error {
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md);
+  background: color-mix(in srgb, var(--caution) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--caution) 30%, var(--border));
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+/* --------------------------------------------------------------------------
+   Toolbar — search
+   -------------------------------------------------------------------------- */
+
+.pantry__toolbar {
+  margin-bottom: var(--space-md);
+}
+
+.pantry__search {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--duration-micro) var(--ease-enter);
+}
+
+.pantry__search::placeholder {
+  color: var(--text-muted);
+}
+
+.pantry__search:focus {
+  border-color: var(--accent);
+}
+
+/* --------------------------------------------------------------------------
+   Add ingredient row
+   -------------------------------------------------------------------------- */
+
+.pantry__add-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+.pantry__add-input {
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--duration-micro) var(--ease-enter);
+}
+
+.pantry__add-input::placeholder {
+  color: var(--text-muted);
+}
+
+.pantry__add-input:focus {
+  border-color: var(--accent);
+}
+
+.pantry__add-input--name {
+  flex: 2;
+  min-width: 120px;
+}
+
+.pantry__add-input--amount {
+  flex: 0.7;
+  min-width: 60px;
+}
+
+.pantry__add-input--price {
+  flex: 0.7;
+  min-width: 60px;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+
+.pantry__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity var(--duration-micro) var(--ease-enter);
+  white-space: nowrap;
+}
+
+.pantry__btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.pantry__btn--add {
+  color: var(--surface);
+  background: var(--accent);
+}
+
+.pantry__btn--secondary {
+  color: var(--text-primary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.pantry__btn--danger {
+  color: var(--surface);
+  background: var(--caution);
+}
+
+/* --------------------------------------------------------------------------
+   Table
+   -------------------------------------------------------------------------- */
+
+.pantry__table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pantry__table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.pantry__th {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+  padding: var(--space-sm) var(--space-sm);
+  border-bottom: 1px solid var(--border);
+}
+
+.pantry__th--actions {
+  width: 40px;
+}
+
+.pantry__row {
+  transition: background-color var(--duration-micro) var(--ease-enter);
+}
+
+.pantry__row:hover {
+  background-color: var(--border-subtle);
+}
+
+.pantry__cell {
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  vertical-align: middle;
+}
+
+.pantry__cell--name {
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.pantry__cell--amount,
+.pantry__cell--price,
+.pantry__cell--unit-price {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.pantry__cell--unit-price {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.pantry__cell--updated {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Editable cells
+   -------------------------------------------------------------------------- */
+
+.pantry__cell-value {
+  cursor: pointer;
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-micro) var(--ease-enter);
+}
+
+.pantry__cell-value:hover {
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.pantry__cell-value:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.pantry__cell-input {
+  width: 100%;
+  padding: var(--space-2xs) var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  outline: none;
+  font-family: inherit;
+}
+
+.pantry__cell-input.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   Unit dropdown
+   -------------------------------------------------------------------------- */
+
+.pantry__unit-select {
+  padding: var(--space-2xs) var(--space-xs);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  cursor: pointer;
+}
+
+.pantry__unit-select:focus {
+  border-color: var(--accent);
+}
+
+/* --------------------------------------------------------------------------
+   Delete button
+   -------------------------------------------------------------------------- */
+
+.pantry__delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color var(--duration-micro) var(--ease-enter),
+              background-color var(--duration-micro) var(--ease-enter);
+}
+
+.pantry__delete-btn:hover {
+  color: var(--caution);
+  background: color-mix(in srgb, var(--caution) 10%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   Dialog overlay
+   -------------------------------------------------------------------------- */
+
+.pantry__dialog-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(47, 36, 29, 0.4);
+  z-index: 100;
+}
+
+.pantry__dialog {
+  width: 90%;
+  max-width: 400px;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  box-shadow: 0 4px 24px rgba(47, 36, 29, 0.15);
+}
+
+.pantry__dialog-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.pantry__dialog-desc {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: var(--space-lg);
+}
+
+.pantry__dialog-actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
+/* --------------------------------------------------------------------------
+   Empty state
+   -------------------------------------------------------------------------- */
+
+.pantry__empty {
+  text-align: center;
+  padding: var(--space-3xl) var(--space-md);
+}
+
+.pantry__empty-text {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive — mobile
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 480px) {
+  .pantry {
+    padding: var(--space-md) var(--space-sm);
+  }
+
+  .pantry__title {
+    font-size: var(--text-xl);
+  }
+
+  .pantry__add-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pantry__add-input--name {
+    flex: 1;
+  }
+
+  .pantry__th,
+  .pantry__cell {
+    padding: var(--space-xs);
+    font-size: var(--text-xs);
+  }
+
+  .pantry__cell--updated {
+    display: none;
+  }
+
+  .pantry__th:nth-child(6) {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .pantry__cell-value,
+  .pantry__row,
+  .pantry__delete-btn,
+  .pantry__search,
+  .pantry__add-input,
+  .pantry__nav-link {
+    transition: none;
+  }
+}
