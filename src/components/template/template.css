@@ -783,7 +783,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Responsive
+   Responsive — tablet (767px and below)
    -------------------------------------------------------------------------- */
 
 @media (max-width: 767px) {
@@ -801,5 +801,111 @@
   .template__recipe-row td {
     padding: var(--space-xs) var(--space-sm);
     font-size: var(--text-xs);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive — mobile (480px and below)
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 480px) {
+  .template {
+    padding: var(--space-md) var(--space-sm);
+  }
+
+  .template__title {
+    font-size: var(--text-xl);
+  }
+
+  /* Hide Yield, Ingredients, and Labor columns on mobile —
+     keep Recipe name, Total Cost, Rec. Price, Actions */
+  .template__recipe-yield,
+  .template__recipe-cost,
+  .template__recipe-labor {
+    display: none;
+  }
+
+  .template__th:nth-child(2),
+  .template__th:nth-child(3),
+  .template__th:nth-child(4) {
+    display: none;
+  }
+
+  .template__toolbar-actions {
+    flex-wrap: wrap;
+  }
+
+  /* Stack Quick Add form inputs vertically */
+  .quick-add__row {
+    flex-direction: column;
+  }
+
+  .quick-add__field {
+    min-width: 100%;
+  }
+
+  .quick-add__field--wide {
+    min-width: 100%;
+  }
+
+  .quick-add__select {
+    min-width: 100%;
+  }
+
+  .quick-add__ingredient-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .quick-add__actions {
+    flex-direction: column;
+  }
+
+  .quick-add__actions .template__btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive — very narrow (375px and below)
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 375px) {
+  .template {
+    padding: var(--space-sm) var(--space-xs);
+  }
+
+  /* Also hide Actions column header text on very narrow screens */
+  .template__recipe-actions {
+    padding: var(--space-xs) var(--space-xs);
+  }
+
+  .template__action-btn {
+    margin-left: 0;
+    margin-top: var(--space-2xs);
+    display: block;
+  }
+
+  .template__recipe-name {
+    min-width: 100px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .template__recipe-row,
+  .template__btn,
+  .template__action-btn,
+  .template__expand-btn,
+  .template__link-btn,
+  .template__unlink-btn,
+  .template__link-dropdown-item,
+  .quick-add__input,
+  .quick-add__add-ingredient-btn {
+    transition: none;
   }
 }

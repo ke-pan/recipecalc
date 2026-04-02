@@ -708,17 +708,17 @@ function PantryContent() {
             </p>
           </div>
         ) : (
-          <div className="pantry__table-wrapper">
-            <table className="pantry__table" data-testid="pantry-table">
+          <div className="pantry__table-wrapper" tabIndex={0} role="region" aria-label="Pantry ingredients table">
+            <table className="pantry__table" data-testid="pantry-table" aria-label="Pantry ingredients">
               <thead>
                 <tr>
-                  <th className="pantry__th">Name</th>
-                  <th className="pantry__th">Amount</th>
-                  <th className="pantry__th">Unit</th>
-                  <th className="pantry__th">Price</th>
-                  <th className="pantry__th">Unit Price</th>
-                  <th className="pantry__th">Updated</th>
-                  <th className="pantry__th pantry__th--actions">
+                  <th className="pantry__th" scope="col">Name</th>
+                  <th className="pantry__th" scope="col">Amount</th>
+                  <th className="pantry__th" scope="col">Unit</th>
+                  <th className="pantry__th" scope="col">Price</th>
+                  <th className="pantry__th" scope="col">Unit Price</th>
+                  <th className="pantry__th" scope="col">Updated</th>
+                  <th className="pantry__th pantry__th--actions" scope="col">
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>

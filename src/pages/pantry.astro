@@ -1,8 +1,10 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import NavBar from '../components/nav/NavBar';
 import PantryPage from '../components/pantry/PantryPage';
 ---
 
 <BaseLayout title="Pantry — RecipeCalc" description="Manage your ingredient prices. Update once, every recipe updates automatically.">
+  <NavBar client:load />
   <PantryPage client:load />
 </BaseLayout>

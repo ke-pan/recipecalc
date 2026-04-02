@@ -1,8 +1,10 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import NavBar from '../components/nav/NavBar';
 import ActivatePage from '../components/activate/ActivatePage';
 ---
 
 <BaseLayout title="Activate — RecipeCalc" description="Activate your RecipeCalc license key to unlock paid features.">
+  <NavBar client:load />
   <ActivatePage client:load />
 </BaseLayout>

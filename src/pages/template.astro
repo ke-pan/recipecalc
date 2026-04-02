@@ -1,8 +1,10 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import NavBar from '../components/nav/NavBar';
 import TemplatePage from '../components/template/TemplatePage';
 ---
 
 <BaseLayout title="Recipes — RecipeCalc" description="View all your recipes, costs, and recommended prices at a glance.">
+  <NavBar client:load />
   <TemplatePage client:load />
 </BaseLayout>

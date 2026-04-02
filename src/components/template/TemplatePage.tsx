@@ -354,10 +354,10 @@ function RecipeRow({ computed, isExpanded, onToggle, onDelete, onLinkIngredient,
             <table className="template__ingredient-table" aria-label={`Ingredients for ${recipe.name}`}>
               <thead>
                 <tr>
-                  <th>Ingredient</th>
-                  <th>Amount</th>
-                  <th>Cost</th>
-                  <th>Source</th>
+                  <th scope="col">Ingredient</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Cost</th>
+                  <th scope="col">Source</th>
                 </tr>
               </thead>
               <tbody>
@@ -561,17 +561,17 @@ function TemplateContent() {
             </a>
           </div>
         ) : (
-          <div className="template__table-wrap">
+          <div className="template__table-wrap" tabIndex={0} role="region" aria-label="Recipe list table">
             <table className="template__table" aria-label="Recipe list">
               <thead>
                 <tr>
-                  <th className="template__th">Recipe</th>
-                  <th className="template__th">Yield</th>
-                  <th className="template__th">Ingredients</th>
-                  <th className="template__th">Labor</th>
-                  <th className="template__th">Total Cost</th>
-                  <th className="template__th">Rec. Price</th>
-                  <th className="template__th template__th--actions">Actions</th>
+                  <th className="template__th" scope="col">Recipe</th>
+                  <th className="template__th" scope="col">Yield</th>
+                  <th className="template__th" scope="col">Ingredients</th>
+                  <th className="template__th" scope="col">Labor</th>
+                  <th className="template__th" scope="col">Total Cost</th>
+                  <th className="template__th" scope="col">Rec. Price</th>
+                  <th className="template__th template__th--actions" scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>

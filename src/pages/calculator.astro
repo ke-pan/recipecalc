@@ -1,8 +1,10 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import NavBar from '../components/nav/NavBar';
 import WizardShell from '../components/wizard/WizardShell';
 ---
 
 <BaseLayout title="Calculator — RecipeCalc" description="Calculate your true recipe cost and find your ideal selling price.">
+  <NavBar client:load />
   <WizardShell client:load />
 </BaseLayout>

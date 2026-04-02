@@ -1,0 +1,74 @@
+/* ==========================================================================
+   NavBar — Global navigation for paid users
+   Source of truth: DESIGN.md
+   ========================================================================== */
+
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.navbar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: var(--max-content-width);
+  margin-inline: auto;
+  padding: var(--space-sm) var(--space-md);
+  gap: var(--space-xs);
+}
+
+.navbar__link {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  transition: color var(--duration-micro) var(--ease-enter),
+              background-color var(--duration-micro) var(--ease-enter);
+  white-space: nowrap;
+}
+
+.navbar__link:hover {
+  color: var(--text-primary);
+  background-color: var(--border-subtle);
+}
+
+.navbar__link--active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.navbar__link--active:hover {
+  color: var(--accent);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 480px) {
+  .navbar__inner {
+    padding: var(--space-xs) var(--space-sm);
+  }
+
+  .navbar__link {
+    font-size: var(--text-xs);
+    padding: var(--space-xs) var(--space-xs);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar__link {
+    transition: none;
+  }
+}

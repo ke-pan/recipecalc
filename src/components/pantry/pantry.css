@@ -506,7 +506,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Responsive — mobile
+   Responsive — mobile (480px and below)
    -------------------------------------------------------------------------- */
 
 @media (max-width: 480px) {
@@ -537,12 +537,50 @@
     font-size: var(--text-xs);
   }
 
+  /* Hide Updated column on mobile */
   .pantry__cell--updated {
     display: none;
   }
 
   .pantry__th:nth-child(6) {
     display: none;
+  }
+
+  /* Hide Unit Price column on narrow screens */
+  .pantry__cell--unit-price {
+    display: none;
+  }
+
+  .pantry__th:nth-child(5) {
+    display: none;
+  }
+
+  /* Ensure table scrolls horizontally if still too wide */
+  .pantry__table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-inline: calc(-1 * var(--space-sm));
+    padding-inline: var(--space-sm);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive — very narrow (375px and below)
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 375px) {
+  .pantry {
+    padding: var(--space-sm) var(--space-xs);
+  }
+
+  .pantry__header-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xs);
+  }
+
+  .pantry__table {
+    min-width: 320px;
   }
 }
 
