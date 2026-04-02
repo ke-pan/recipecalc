@@ -24,6 +24,10 @@ export interface Ingredient {
   usedUnit: string;
   /** Waste percentage (0–100). 10 means 10% waste. */
   wastePercent: number;
+  /** Reference to a Pantry item's ID. When set, hydration replaces purchase info from Pantry. */
+  pantryId?: string | null;
+  /** Stable semantic key (e.g. "all-purpose-flour") for density table lookups. */
+  ingredientKey?: string;
 }
 
 /** Labor, packaging, and overhead costs for a recipe batch. */
