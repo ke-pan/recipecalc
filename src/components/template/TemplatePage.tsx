@@ -2,11 +2,13 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { LicenseProvider, useLicense } from '../../contexts/LicenseContext.js';
 import { useRecipes, type SavedRecipe } from '../../hooks/useRecipes.js';
 import { usePantry } from '../../hooks/usePantry.js';
+import { useDefaults } from '../../hooks/useDefaults.js';
 import { hydrateRecipe, type HydrationWarningType } from '../../lib/pantry/hydrate.js';
 import { calculateTotalCosts, calculateIngredientCost, calculatePricing } from '../../lib/calc/pricing.js';
 import { formatCurrency } from '../../lib/format.js';
-import type { Ingredient } from '../../lib/calc/types.js';
+import type { Ingredient, Recipe } from '../../lib/calc/types.js';
 import type { PantryItem } from '../../types/pantry.js';
+import QuickAddForm from './QuickAddForm.js';
 import './template.css';
 
 // ---------------------------------------------------------------------------
@@ -389,10 +391,12 @@ function RecipeRow({ computed, isExpanded, onToggle, onDelete, onLinkIngredient,
 
 function TemplateContent() {
   const { isUnlocked } = useLicense();
-  const { recipes, remove, update, exportAll, importRecipes } = useRecipes();
-  const { pantry } = usePantry();
+  const { recipes, save, remove, update, exportAll, importRecipes } = useRecipes();
+  const { pantry, add: addPantryItem } = usePantry();
+  const { defaults } = useDefaults();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   // Redirect to /activate if not unlocked
   if (!isUnlocked) {
@@ -500,6 +504,18 @@ function TemplateContent() {
     input.click();
   }, [importRecipes]);
 
+  const handleQuickAddSave = useCallback(
+    (recipe: Recipe, targetCostRatio: number) => {
+      save(recipe, targetCostRatio);
+      setShowQuickAdd(false);
+    },
+    [save],
+  );
+
+  const handleQuickAddCancel = useCallback(() => {
+    setShowQuickAdd(false);
+  }, []);
+
   return (
     <div className="template">
       <div className="template__container">
@@ -515,6 +531,15 @@ function TemplateContent() {
             {recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'}
           </span>
           <div className="template__toolbar-actions">
+            <button
+              type="button"
+              className="template__btn"
+              onClick={() => setShowQuickAdd(true)}
+              disabled={showQuickAdd}
+              data-testid="quick-add-btn"
+            >
+              Quick Add
+            </button>
             <a href="/pantry" className="template__toolbar-link">
               Go to Pantry
             </a>
@@ -565,6 +590,17 @@ function TemplateContent() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* Quick Add form — inline below table */}
+        {showQuickAdd && (
+          <QuickAddForm
+            pantry={pantry}
+            defaults={defaults}
+            onSave={handleQuickAddSave}
+            onSavePantryItem={addPantryItem}
+            onCancel={handleQuickAddCancel}
+          />
         )}
 
         {/* Delete confirmation dialog */}
