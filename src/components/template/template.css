@@ -1,0 +1,433 @@
+/* ==========================================================================
+   Template Page — /template (Recipe Table)
+   Source of truth: DESIGN.md
+   ========================================================================== */
+
+.template {
+  min-height: 100vh;
+  padding: var(--space-lg) var(--space-md);
+}
+
+.template__container {
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+/* --------------------------------------------------------------------------
+   Header
+   -------------------------------------------------------------------------- */
+
+.template__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+}
+
+.template__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-2xl);
+  color: var(--text-primary);
+}
+
+.template__logo {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.template__logo:hover {
+  color: var(--text-primary);
+}
+
+/* --------------------------------------------------------------------------
+   Toolbar
+   -------------------------------------------------------------------------- */
+
+.template__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+.template__count {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.template__toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.template__toolbar-link {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  padding: var(--space-xs) var(--space-sm);
+}
+
+.template__toolbar-link:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+
+.template__btn {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: var(--accent);
+  color: var(--surface);
+  transition: background var(--duration-micro) var(--ease-enter);
+}
+
+.template__btn:hover {
+  background: var(--accent-hover);
+}
+
+.template__btn--secondary {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.template__btn--secondary:hover {
+  background: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.template__btn--danger {
+  background: var(--caution);
+  color: var(--surface);
+}
+
+.template__btn--danger:hover {
+  background: #b55a24;
+}
+
+/* --------------------------------------------------------------------------
+   Table wrapper (horizontal scroll on mobile)
+   -------------------------------------------------------------------------- */
+
+.template__table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+
+/* --------------------------------------------------------------------------
+   Recipe Table
+   -------------------------------------------------------------------------- */
+
+.template__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+}
+
+.template__th {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  text-align: left;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.template__th--actions {
+  text-align: right;
+}
+
+/* --------------------------------------------------------------------------
+   Recipe row
+   -------------------------------------------------------------------------- */
+
+.template__recipe-row {
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background var(--duration-micro) var(--ease-enter);
+}
+
+.template__recipe-row:hover {
+  background: var(--bg);
+}
+
+.template__recipe-row--expanded {
+  background: var(--bg);
+}
+
+.template__recipe-row td {
+  padding: var(--space-sm) var(--space-md);
+  vertical-align: middle;
+}
+
+/* Recipe name cell with expand button */
+.template__recipe-name {
+  min-width: 160px;
+}
+
+.template__expand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: var(--space-2xs) 0;
+  text-align: left;
+}
+
+.template__expand-btn:hover {
+  color: var(--accent);
+}
+
+.template__expand-arrow {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.template__row-warning-count {
+  font-size: var(--text-xs);
+  color: var(--caution);
+  margin-left: var(--space-xs);
+}
+
+/* Numeric columns */
+.template__recipe-yield,
+.template__recipe-cost,
+.template__recipe-labor,
+.template__recipe-total,
+.template__recipe-price {
+  white-space: nowrap;
+}
+
+.template__confidence {
+  color: var(--confidence);
+  font-weight: 500;
+}
+
+/* Action buttons column */
+.template__recipe-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.template__action-btn {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2xs) var(--space-sm);
+  cursor: pointer;
+  color: var(--text-muted);
+  text-decoration: none;
+  margin-left: var(--space-xs);
+  transition: all var(--duration-micro) var(--ease-enter);
+}
+
+.template__action-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.template__action-btn--delete:hover {
+  color: var(--caution);
+  border-color: var(--caution);
+}
+
+/* --------------------------------------------------------------------------
+   Expanded row (ingredient details)
+   -------------------------------------------------------------------------- */
+
+.template__expanded-row td {
+  padding: 0 var(--space-md) var(--space-md);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.template__ingredient-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.template__ingredient-table th {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  text-align: left;
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.template__ingredient-row td {
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.template__ingredient-row:last-child td {
+  border-bottom: none;
+}
+
+.template__ingredient-name {
+  font-weight: 500;
+}
+
+.template__warning-icon {
+  color: var(--caution);
+  font-size: var(--text-xs);
+  margin-left: var(--space-2xs);
+  cursor: help;
+}
+
+.template__pantry-linked {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--confidence);
+}
+
+.template__pantry-inline {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Empty state
+   -------------------------------------------------------------------------- */
+
+.template__empty {
+  text-align: center;
+  padding: var(--space-3xl) var(--space-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+}
+
+.template__empty-text {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--text-muted);
+  margin-bottom: var(--space-lg);
+}
+
+/* --------------------------------------------------------------------------
+   Delete dialog
+   -------------------------------------------------------------------------- */
+
+.template__dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(47, 36, 29, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: var(--space-md);
+}
+
+.template__dialog {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl) var(--space-lg);
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+
+.template__dialog-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.template__dialog-desc {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-lg);
+  line-height: 1.5;
+}
+
+.template__dialog-actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: center;
+}
+
+/* --------------------------------------------------------------------------
+   Monospace for all number cells
+   -------------------------------------------------------------------------- */
+
+.template__table .mono,
+.template__ingredient-table .mono {
+  font-family: var(--font-data);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 767px) {
+  .template__header {
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .template__toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .template__th,
+  .template__recipe-row td {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-xs);
+  }
+}
