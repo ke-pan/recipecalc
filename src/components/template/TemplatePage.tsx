@@ -1,10 +1,11 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { LicenseProvider, useLicense } from '../../contexts/LicenseContext.js';
 import { useRecipes, type SavedRecipe } from '../../hooks/useRecipes.js';
 import { usePantry } from '../../hooks/usePantry.js';
 import { hydrateRecipe, type HydrationWarningType } from '../../lib/pantry/hydrate.js';
 import { calculateTotalCosts, calculateIngredientCost, calculatePricing } from '../../lib/calc/pricing.js';
 import { formatCurrency } from '../../lib/format.js';
+import type { Ingredient } from '../../lib/calc/types.js';
 import type { PantryItem } from '../../types/pantry.js';
 import './template.css';
 
@@ -44,22 +45,134 @@ function WarningIcon({ warning }: { warning: HydrationWarningType }) {
 }
 
 // ---------------------------------------------------------------------------
+// Name similarity scoring (simple word-overlap heuristic)
+// ---------------------------------------------------------------------------
+
+/**
+ * Score how similar two ingredient names are.
+ * Higher is more similar. Exact match = 1000, word overlap gets partial credit.
+ */
+function nameSimilarity(ingredientName: string, pantryName: string): number {
+  const a = ingredientName.toLowerCase().trim();
+  const b = pantryName.toLowerCase().trim();
+
+  // Exact match
+  if (a === b) return 1000;
+
+  // Substring match
+  if (b.includes(a) || a.includes(b)) return 500;
+
+  // Word overlap
+  const wordsA = a.split(/\s+/);
+  const wordsB = new Set(b.split(/\s+/));
+  let overlap = 0;
+  for (const w of wordsA) {
+    if (wordsB.has(w)) overlap++;
+  }
+
+  return overlap * 100;
+}
+
+// ---------------------------------------------------------------------------
+// Pantry link dropdown
+// ---------------------------------------------------------------------------
+
+interface PantryLinkDropdownProps {
+  ingredientName: string;
+  pantry: PantryItem[];
+  onSelect: (pantryItem: PantryItem) => void;
+  onClose: () => void;
+}
+
+function PantryLinkDropdown({ ingredientName, pantry, onSelect, onClose }: PantryLinkDropdownProps) {
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [onClose]);
+
+  // Sort pantry items by name similarity to the ingredient
+  const sorted = useMemo(() => {
+    return [...pantry].sort((a, b) => {
+      const scoreA = nameSimilarity(ingredientName, a.name);
+      const scoreB = nameSimilarity(ingredientName, b.name);
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return a.name.localeCompare(b.name);
+    });
+  }, [pantry, ingredientName]);
+
+  if (pantry.length === 0) {
+    return (
+      <div className="template__link-dropdown" ref={dropdownRef} data-testid="pantry-link-dropdown">
+        <div className="template__link-dropdown-empty">
+          No pantry items yet.{' '}
+          <a href="/pantry">Add some &rarr;</a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="template__link-dropdown" ref={dropdownRef} data-testid="pantry-link-dropdown">
+      <div className="template__link-dropdown-header">Link to Pantry</div>
+      <ul className="template__link-dropdown-list" role="listbox" aria-label="Pantry items">
+        {sorted.map((item) => (
+          <li key={item.id} role="option">
+            <button
+              type="button"
+              className="template__link-dropdown-item"
+              onClick={() => onSelect(item)}
+              data-testid={`pantry-option-${item.id}`}
+            >
+              <span className="template__link-dropdown-name">{item.name}</span>
+              <span className="template__link-dropdown-price mono">
+                {formatCurrency(item.purchasePrice)}/{item.purchaseAmount}{item.purchaseUnit}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Ingredient detail row (expanded view)
 // ---------------------------------------------------------------------------
 
 interface IngredientRowProps {
   name: string;
+  ingredientId: string;
   usedAmount: number;
   usedUnit: string;
   cost: number;
   pantryId?: string | null;
   warning?: HydrationWarningType;
   pantry: PantryItem[];
+  onLink: (ingredientId: string, pantryItem: PantryItem) => void;
+  onUnlink: (ingredientId: string) => void;
 }
 
-function IngredientRow({ name, usedAmount, usedUnit, cost, pantryId, warning, pantry }: IngredientRowProps) {
+function IngredientRow({ name, ingredientId, usedAmount, usedUnit, cost, pantryId, warning, pantry, onLink, onUnlink }: IngredientRowProps) {
+  const [showDropdown, setShowDropdown] = useState(false);
   const pantryItem = pantryId ? pantry.find((p) => p.id === pantryId) : undefined;
   const isLinked = !!pantryId && !!pantryItem;
+
+  const handleSelect = useCallback((item: PantryItem) => {
+    onLink(ingredientId, item);
+    setShowDropdown(false);
+  }, [ingredientId, onLink]);
+
+  const handleUnlink = useCallback(() => {
+    onUnlink(ingredientId);
+  }, [ingredientId, onUnlink]);
 
   return (
     <tr className="template__ingredient-row">
@@ -73,11 +186,41 @@ function IngredientRow({ name, usedAmount, usedUnit, cost, pantryId, warning, pa
       <td className="template__ingredient-cost mono">{formatCurrency(cost)}</td>
       <td className="template__ingredient-pantry">
         {isLinked ? (
-          <span className="template__pantry-linked" title={`Linked to: ${pantryItem.name}`}>
-            Pantry
+          <span className="template__pantry-badge-group">
+            <span className="template__pantry-linked" title={`Linked to: ${pantryItem.name}`}>
+              Pantry
+            </span>
+            <button
+              type="button"
+              className="template__unlink-btn"
+              onClick={handleUnlink}
+              title="Unlink from Pantry"
+              aria-label={`Unlink ${name} from Pantry`}
+            >
+              &times;
+            </button>
           </span>
         ) : (
-          <span className="template__pantry-inline">Inline</span>
+          <span className="template__link-cell">
+            <button
+              type="button"
+              className="template__link-btn"
+              onClick={() => setShowDropdown(!showDropdown)}
+              title="Link to Pantry item"
+              aria-label={`Link ${name} to Pantry`}
+              data-testid={`link-btn-${ingredientId}`}
+            >
+              &#x1F517; Link
+            </button>
+            {showDropdown && (
+              <PantryLinkDropdown
+                ingredientName={name}
+                pantry={pantry}
+                onSelect={handleSelect}
+                onClose={() => setShowDropdown(false)}
+              />
+            )}
+          </span>
         )}
       </td>
     </tr>
@@ -133,10 +276,12 @@ interface RecipeRowProps {
   isExpanded: boolean;
   onToggle: () => void;
   onDelete: (id: string) => void;
+  onLinkIngredient: (recipeId: string, ingredientId: string, pantryItem: PantryItem) => void;
+  onUnlinkIngredient: (recipeId: string, ingredientId: string) => void;
   pantry: PantryItem[];
 }
 
-function RecipeRow({ computed, isExpanded, onToggle, onDelete, pantry }: RecipeRowProps) {
+function RecipeRow({ computed, isExpanded, onToggle, onDelete, onLinkIngredient, onUnlinkIngredient, pantry }: RecipeRowProps) {
   const { saved, ingredientCost, laborCost, trueTotalCost, recommendedPricePerUnit, warnings } = computed;
   const { recipe } = saved;
 
@@ -218,12 +363,15 @@ function RecipeRow({ computed, isExpanded, onToggle, onDelete, pantry }: RecipeR
                   <IngredientRow
                     key={ing.id}
                     name={ing.name}
+                    ingredientId={ing.id}
                     usedAmount={ing.usedAmount}
                     usedUnit={ing.usedUnit}
                     cost={calculateIngredientCost(ing)}
                     pantryId={ing.pantryId}
                     warning={warningMap.get(ing.name)}
                     pantry={pantry}
+                    onLink={(ingredientId, pantryItem) => onLinkIngredient(saved.id, ingredientId, pantryItem)}
+                    onUnlink={(ingredientId) => onUnlinkIngredient(saved.id, ingredientId)}
                   />
                 ))}
               </tbody>
@@ -241,7 +389,7 @@ function RecipeRow({ computed, isExpanded, onToggle, onDelete, pantry }: RecipeR
 
 function TemplateContent() {
   const { isUnlocked } = useLicense();
-  const { recipes, remove, exportAll, importRecipes } = useRecipes();
+  const { recipes, remove, update, exportAll, importRecipes } = useRecipes();
   const { pantry } = usePantry();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -295,6 +443,34 @@ function TemplateContent() {
   const handleDeleteCancel = useCallback(() => {
     setDeleteTarget(null);
   }, []);
+
+  const handleLinkIngredient = useCallback((recipeId: string, ingredientId: string, pantryItem: PantryItem) => {
+    const saved = recipes.find((r) => r.id === recipeId);
+    if (!saved) return;
+
+    const updatedIngredients: Ingredient[] = saved.recipe.ingredients.map((ing) =>
+      ing.id === ingredientId
+        ? { ...ing, pantryId: pantryItem.id, ingredientKey: pantryItem.ingredientKey }
+        : ing,
+    );
+
+    const updatedRecipe = { ...saved.recipe, ingredients: updatedIngredients };
+    update(recipeId, updatedRecipe, saved.targetCostRatio);
+  }, [recipes, update]);
+
+  const handleUnlinkIngredient = useCallback((recipeId: string, ingredientId: string) => {
+    const saved = recipes.find((r) => r.id === recipeId);
+    if (!saved) return;
+
+    const updatedIngredients: Ingredient[] = saved.recipe.ingredients.map((ing) =>
+      ing.id === ingredientId
+        ? { ...ing, pantryId: null, ingredientKey: undefined }
+        : ing,
+    );
+
+    const updatedRecipe = { ...saved.recipe, ingredients: updatedIngredients };
+    update(recipeId, updatedRecipe, saved.targetCostRatio);
+  }, [recipes, update]);
 
   const handleExport = useCallback(() => {
     const json = exportAll();
@@ -381,6 +557,8 @@ function TemplateContent() {
                     isExpanded={expandedId === computed.saved.id}
                     onToggle={() => handleToggle(computed.saved.id)}
                     onDelete={handleDeleteRequest}
+                    onLinkIngredient={handleLinkIngredient}
+                    onUnlinkIngredient={handleUnlinkIngredient}
                     pantry={pantry}
                   />
                 ))}

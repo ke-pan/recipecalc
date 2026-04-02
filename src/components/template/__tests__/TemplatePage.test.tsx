@@ -313,7 +313,7 @@ describe('TemplatePage', () => {
     expect(expandBtn).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('shows ingredient source as "Inline" when no pantryId', async () => {
+  it('shows "Link" button for unlinked ingredients', async () => {
     const user = userEvent.setup();
     store[LICENSE_KEY] = makeLicenseJSON();
     store[RECIPES_KEY] = JSON.stringify([makeRecipe()]);
@@ -321,11 +321,12 @@ describe('TemplatePage', () => {
 
     await user.click(screen.getByText('Chocolate Cookies'));
 
-    const inlineLabels = screen.getAllByText('Inline');
-    expect(inlineLabels.length).toBe(2); // both ingredients are inline
+    // Both ingredients should have Link buttons
+    const linkButtons = screen.getAllByText(/Link/);
+    expect(linkButtons.length).toBe(2);
   });
 
-  it('shows ingredient source as "Pantry" when linked to pantry item', async () => {
+  it('shows ingredient source as "Pantry" badge when linked to pantry item', async () => {
     const user = userEvent.setup();
     store[LICENSE_KEY] = makeLicenseJSON();
 
@@ -341,7 +342,8 @@ describe('TemplatePage', () => {
     await user.click(screen.getByText('Chocolate Cookies'));
 
     expect(screen.getByText('Pantry')).toBeInTheDocument();
-    expect(screen.getByText('Inline')).toBeInTheDocument(); // Sugar is still inline
+    // Sugar should have a Link button (not linked)
+    expect(screen.getByLabelText('Link Sugar to Pantry')).toBeInTheDocument();
   });
 
   // ---- Edit button ----
@@ -464,6 +466,145 @@ describe('TemplatePage', () => {
 
     const warningIcon = screen.getByTitle('Pantry item deleted — using saved price');
     expect(warningIcon).toBeInTheDocument();
+  });
+
+  // ---- Pantry linking ----
+
+  it('opens pantry dropdown when clicking Link button', async () => {
+    const user = userEvent.setup();
+    store[LICENSE_KEY] = makeLicenseJSON();
+
+    const pantryItem = makePantryItem();
+    store[PANTRY_KEY] = JSON.stringify([pantryItem]);
+    store[RECIPES_KEY] = JSON.stringify([makeRecipe()]);
+
+    render(<TemplatePage />);
+
+    await user.click(screen.getByText('Chocolate Cookies'));
+
+    // Click the Link button for flour
+    await user.click(screen.getByTestId('link-btn-ing-1'));
+
+    // Dropdown should appear
+    expect(screen.getByTestId('pantry-link-dropdown')).toBeInTheDocument();
+    expect(screen.getByText('Link to Pantry')).toBeInTheDocument();
+    expect(screen.getByTestId(`pantry-option-${pantryItem.id}`)).toBeInTheDocument();
+  });
+
+  it('links ingredient to pantry item when selecting from dropdown', async () => {
+    const user = userEvent.setup();
+    store[LICENSE_KEY] = makeLicenseJSON();
+
+    const pantryItem = makePantryItem();
+    store[PANTRY_KEY] = JSON.stringify([pantryItem]);
+    store[RECIPES_KEY] = JSON.stringify([makeRecipe()]);
+
+    render(<TemplatePage />);
+
+    await user.click(screen.getByText('Chocolate Cookies'));
+    await user.click(screen.getByTestId('link-btn-ing-1'));
+    await user.click(screen.getByTestId(`pantry-option-${pantryItem.id}`));
+
+    // Should now show "Pantry" badge instead of "Link" for flour
+    expect(screen.getByText('Pantry')).toBeInTheDocument();
+
+    // Verify localStorage was updated
+    const savedRecipes = JSON.parse(store[RECIPES_KEY]);
+    expect(savedRecipes[0].recipe.ingredients[0].pantryId).toBe(pantryItem.id);
+    expect(savedRecipes[0].recipe.ingredients[0].ingredientKey).toBe(pantryItem.ingredientKey);
+  });
+
+  it('unlinks ingredient from pantry when clicking unlink button', async () => {
+    const user = userEvent.setup();
+    store[LICENSE_KEY] = makeLicenseJSON();
+
+    const pantryItem = makePantryItem();
+    store[PANTRY_KEY] = JSON.stringify([pantryItem]);
+
+    const recipe = makeRecipe();
+    recipe.recipe.ingredients[0].pantryId = pantryItem.id;
+    recipe.recipe.ingredients[0].ingredientKey = pantryItem.ingredientKey;
+    store[RECIPES_KEY] = JSON.stringify([recipe]);
+
+    render(<TemplatePage />);
+
+    await user.click(screen.getByText('Chocolate Cookies'));
+    expect(screen.getByText('Pantry')).toBeInTheDocument();
+
+    // Click unlink button
+    await user.click(screen.getByLabelText('Unlink All-Purpose Flour from Pantry'));
+
+    // Should now show Link button instead
+    expect(screen.getByLabelText('Link All-Purpose Flour to Pantry')).toBeInTheDocument();
+
+    // Verify localStorage was updated
+    const savedRecipes = JSON.parse(store[RECIPES_KEY]);
+    expect(savedRecipes[0].recipe.ingredients[0].pantryId).toBeNull();
+  });
+
+  it('shows empty dropdown message when no pantry items exist', async () => {
+    const user = userEvent.setup();
+    store[LICENSE_KEY] = makeLicenseJSON();
+    store[PANTRY_KEY] = JSON.stringify([]);
+    store[RECIPES_KEY] = JSON.stringify([makeRecipe()]);
+
+    render(<TemplatePage />);
+
+    await user.click(screen.getByText('Chocolate Cookies'));
+    await user.click(screen.getByTestId('link-btn-ing-1'));
+
+    expect(screen.getByText(/No pantry items yet/)).toBeInTheDocument();
+  });
+
+  it('sorts pantry dropdown by name similarity', async () => {
+    const user = userEvent.setup();
+    store[LICENSE_KEY] = makeLicenseJSON();
+
+    const pantryItems = [
+      makePantryItem({ id: 'p-sugar', name: 'Sugar', ingredientKey: 'sugar' }),
+      makePantryItem({ id: 'p-flour', name: 'All-Purpose Flour', ingredientKey: 'all-purpose-flour' }),
+      makePantryItem({ id: 'p-butter', name: 'Butter', ingredientKey: 'butter' }),
+    ];
+    store[PANTRY_KEY] = JSON.stringify(pantryItems);
+    store[RECIPES_KEY] = JSON.stringify([makeRecipe()]);
+
+    render(<TemplatePage />);
+
+    await user.click(screen.getByText('Chocolate Cookies'));
+    // Click Link button for "All-Purpose Flour" ingredient
+    await user.click(screen.getByTestId('link-btn-ing-1'));
+
+    const dropdown = screen.getByTestId('pantry-link-dropdown');
+    const options = within(dropdown).getAllByRole('option');
+
+    // "All-Purpose Flour" should be first (exact match)
+    expect(within(options[0]).getByText('All-Purpose Flour')).toBeInTheDocument();
+  });
+
+  it('linked ingredient cost reflects pantry pricing after hydration', async () => {
+    const user = userEvent.setup();
+    store[LICENSE_KEY] = makeLicenseJSON();
+
+    // Pantry item with different pricing
+    const pantryItem = makePantryItem({
+      purchasePrice: 10.00, // Different from recipe's 4.99
+      purchaseAmount: 10,   // Different from recipe's 5
+    });
+    store[PANTRY_KEY] = JSON.stringify([pantryItem]);
+
+    const recipe = makeRecipe();
+    recipe.recipe.ingredients[0].pantryId = pantryItem.id;
+    store[RECIPES_KEY] = JSON.stringify([recipe]);
+
+    render(<TemplatePage />);
+
+    // The costs should be computed using pantry pricing via hydration
+    // flour cost = 10.00 * (2/10) * 1.05 = $2.10
+    await user.click(screen.getByText('Chocolate Cookies'));
+
+    // Flour cost should reflect pantry pricing (hydrated)
+    const costCells = document.querySelectorAll('.template__ingredient-cost');
+    expect(costCells[0].textContent).toBe('$2.10');
   });
 
   // ---- RecipeCalc logo ----
