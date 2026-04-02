@@ -207,7 +207,7 @@ describe('eventHandler — Checkout.Success', () => {
 
 describe('openCheckout', () => {
   it('calls LemonSqueezy.Url.Open with the given URL', () => {
-    const url = 'https://recipecalc.lemonsqueezy.com/buy/abc123';
+    const url = 'https://recipepricer.lemonsqueezy.com/buy/abc123';
     openCheckout(url);
 
     expect(mockUrlOpen).toHaveBeenCalledTimes(1);

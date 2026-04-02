@@ -89,12 +89,12 @@ describe('useLemonCheckout', () => {
     const { result } = renderHook(() => useLemonCheckout());
 
     act(() => {
-      result.current.openCheckout('https://recipecalc.lemonsqueezy.com/buy/abc');
+      result.current.openCheckout('https://recipepricer.lemonsqueezy.com/buy/abc');
     });
 
     expect(mockOpenCheckout).toHaveBeenCalledTimes(1);
     expect(mockOpenCheckout).toHaveBeenCalledWith(
-      'https://recipecalc.lemonsqueezy.com/buy/abc',
+      'https://recipepricer.lemonsqueezy.com/buy/abc',
     );
   });
 

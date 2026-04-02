@@ -34,7 +34,7 @@ function Wrapper({ children }: { children: ReactNode }) {
   return <LicenseProvider>{children}</LicenseProvider>;
 }
 
-const TEST_CHECKOUT_URL = 'https://recipecalc.lemonsqueezy.com/buy/test-123';
+const TEST_CHECKOUT_URL = 'https://recipepricer.lemonsqueezy.com/buy/test-123';
 
 describe('PaywallCard', () => {
   beforeEach(() => {

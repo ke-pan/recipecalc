@@ -1,11 +1,16 @@
 name = "recipepricer"
+account_id = "20636766149d1b506fafd7465e2cdde7"
 compatibility_date = "2026-04-02"
 workers_dev = false
 
-routes = [
-  { pattern = "recipepricer.com/*", zone_name = "recipepricer.com" },
-  { pattern = "www.recipepricer.com/*", zone_name = "recipepricer.com" },
-]
+# Custom domains
+[[routes]]
+pattern = "recipepricer.com"
+custom_domain = true
+
+[[routes]]
+pattern = "www.recipepricer.com"
+custom_domain = true
 
 # Public env vars (client-visible, baked into build)
 # Fill in actual values before deploying

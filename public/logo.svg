@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 80" fill="none">
+  <style>
+    .tag { fill: #B85C38 }
+    .hole { fill: #FFF9F2 }
+    .wordmark { fill: #2F241D; font-family: Fraunces, Georgia, 'Times New Roman', serif; font-weight: 600 }
+    @media (prefers-color-scheme: dark) {
+      .tag { fill: #D4845A }
+      .hole { fill: #292524 }
+      .wordmark { fill: #F5F0EB }
+    }
+  </style>
+  <!-- Price tag icon -->
+  <path class="tag" d="M6 22c0-4.4 3.6-8 8-8h24l26 26-26 26H14c-4.4 0-8-3.6-8-8V22z"/>
+  <circle class="hole" cx="20" cy="40" r="5.5"/>
+  <!-- Wordmark -->
+  <text class="wordmark" x="80" y="52" font-size="42">RecipePricer</text>
+</svg>
