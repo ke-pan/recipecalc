@@ -1,5 +1,14 @@
 name = "recipecalc"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-04-02"
+workers_dev = false
+
+routes = [
+  { pattern = "recipepricer.com/*", zone_name = "recipepricer.com" },
+  { pattern = "www.recipepricer.com/*", zone_name = "recipepricer.com" },
+]
+
+[observability]
+enabled = true
 
 [assets]
 directory = "dist"

@@ -2,12 +2,17 @@
 interface Props {
   title?: string;
   description?: string;
+  ogImage?: string;
 }
 
 const {
   title = 'RecipeCalc — Pricing Therapist for Home Bakers',
   description = 'Know your true recipe cost. Price with confidence.',
+  ogImage = '/hero-baking.jpg',
 } = Astro.props;
+
+const canonicalUrl = Astro.url.href;
+const ogImageUrl = new URL(ogImage, Astro.site).href;
 
 const umamiWebsiteId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID;
 const umamiSrc = import.meta.env.PUBLIC_UMAMI_SRC;
@@ -21,6 +26,20 @@ const enableUmami = import.meta.env.PROD && !!umamiWebsiteId && !!umamiSrc;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImageUrl} />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
 
     <!-- Google Fonts: Fraunces (heading), DM Sans (body), Geist Mono (data) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

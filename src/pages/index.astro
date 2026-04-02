@@ -12,13 +12,60 @@ const description =
 
 <BaseLayout title={title} description={description}>
   <Fragment slot="head">
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://recipecalc.app/" />
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is this recipe cost calculator really free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The cost breakdown is free. You'll see your true recipe cost, the gap between ingredient cost and real cost, and a full breakdown of hidden costs. The paid version ($19 one-time, not a subscription) adds a recommended selling price with adjustable margin, recipe saving, and export."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do you calculate the cost of a recipe?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We add up four layers: ingredient costs (with unit conversion so you can mix cups, grams, and pounds), labor cost (your hourly rate times batch time), packaging and overhead (utilities, kitchen rental, etc.), and platform fees (Etsy, farmers market booth, delivery apps, etc.). Most recipe calculators only handle the first layer."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How should I price my homemade food products?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A common rule of thumb is that ingredient costs should be 25-35% of your selling price. But many home food makers forget to include their labor, packaging, and overhead. Our calculator shows your true total cost and suggests a price based on your target profit margin."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Where is my recipe data stored?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Everything stays on your device in your browser's local storage. There are no accounts, no servers, no cloud sync. Your recipes never leave your computer. You can export them as a JSON backup file anytime."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does this work for cakes, ice cream, BBQ, and other foods?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. RecipeCalc works for any food product: cakes, cookies, ice cream, BBQ, sauces, prepared meals, catering portions, and more. Enter your ingredients and quantities, add your time and overhead, and get a true cost per serving or per batch."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What if I sell on Etsy or at farmers markets?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Add your platform fees (like Etsy's ~15% transaction fee) as a fixed estimate in the overhead section. The calculator factors it into your true cost."
+          }
+        }
+      ]
+    })} />
   </Fragment>
 
   <!-- 1. Hero -->
