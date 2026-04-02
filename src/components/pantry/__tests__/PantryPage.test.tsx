@@ -31,6 +31,7 @@ vi.mock('../../../hooks/useRecipes.js', () => ({
 
 const LICENSE_KEY = 'recipecalc_license';
 const PANTRY_KEY = 'recipecalc_pantry';
+const DEFAULTS_KEY = 'recipecalc_defaults';
 
 let store: Record<string, string> = {};
 
@@ -462,5 +463,142 @@ describe('PantryPage', () => {
     await user.type(screen.getByTestId('add-price-input'), '3.49{Enter}');
 
     expect(screen.getByText('Eggs')).toBeInTheDocument();
+  });
+
+  // ---- My Defaults section ----
+
+  describe('My Defaults', () => {
+    it('renders My Defaults section', () => {
+      setupWithLicense();
+      render(<PantryPage />);
+      expect(screen.getByTestId('my-defaults')).toBeInTheDocument();
+      expect(screen.getByText('My Defaults')).toBeInTheDocument();
+    });
+
+    it('shows hint text about Calculator and Quick Add', () => {
+      setupWithLicense();
+      render(<PantryPage />);
+      expect(screen.getByText('Used by Calculator and Quick Add. Each recipe can override.')).toBeInTheDocument();
+    });
+
+    it('renders all 4 default value cards', () => {
+      setupWithLicense();
+      render(<PantryPage />);
+      expect(screen.getByTestId('default-hourly-rate')).toBeInTheDocument();
+      expect(screen.getByTestId('default-packaging')).toBeInTheDocument();
+      expect(screen.getByTestId('default-overhead')).toBeInTheDocument();
+      expect(screen.getByTestId('default-platform-fees')).toBeInTheDocument();
+    });
+
+    it('shows correct labels and suffixes', () => {
+      setupWithLicense();
+      render(<PantryPage />);
+      expect(screen.getByText('Hourly Rate')).toBeInTheDocument();
+      expect(screen.getByText('$/hr')).toBeInTheDocument();
+      expect(screen.getByText('Packaging')).toBeInTheDocument();
+      expect(screen.getByText('Platform Fees')).toBeInTheDocument();
+      // $/batch appears multiple times
+      expect(screen.getAllByText('$/batch')).toHaveLength(3);
+    });
+
+    it('displays $0.00 for all defaults when no values saved', () => {
+      setupWithLicense();
+      render(<PantryPage />);
+      const defaultsSection = screen.getByTestId('my-defaults');
+      const values = within(defaultsSection).getAllByText('$0.00');
+      expect(values).toHaveLength(4);
+    });
+
+    it('displays saved default values from localStorage', () => {
+      setupWithLicense();
+      store[DEFAULTS_KEY] = JSON.stringify({
+        hourlyRate: 15,
+        packaging: 2.5,
+        overhead: 5,
+        platformFees: 1.5,
+      });
+      render(<PantryPage />);
+      const defaultsSection = screen.getByTestId('my-defaults');
+      expect(within(defaultsSection).getByText('$15.00')).toBeInTheDocument();
+      expect(within(defaultsSection).getByText('$2.50')).toBeInTheDocument();
+      expect(within(defaultsSection).getByText('$5.00')).toBeInTheDocument();
+      expect(within(defaultsSection).getByText('$1.50')).toBeInTheDocument();
+    });
+
+    it('allows inline editing of a default value', async () => {
+      setupWithLicense();
+      const user = userEvent.setup();
+      render(<PantryPage />);
+
+      // Click on the hourly rate value to edit
+      await user.click(screen.getByTestId('default-hourly-rate-value'));
+
+      // Should now be an input
+      const input = screen.getByTestId('default-hourly-rate-input');
+      expect(input).toBeInTheDocument();
+
+      await user.clear(input);
+      await user.type(input, '25{Enter}');
+
+      // Should update the displayed value
+      await waitFor(() => {
+        expect(screen.getByTestId('default-hourly-rate-value')).toHaveTextContent('$25.00');
+      });
+    });
+
+    it('saves edited default to localStorage', async () => {
+      setupWithLicense();
+      const user = userEvent.setup();
+      render(<PantryPage />);
+
+      await user.click(screen.getByTestId('default-packaging-value'));
+      const input = screen.getByTestId('default-packaging-input');
+      await user.clear(input);
+      await user.type(input, '3.50{Enter}');
+
+      await waitFor(() => {
+        const stored = JSON.parse(store[DEFAULTS_KEY]);
+        expect(stored.packaging).toBe(3.5);
+      });
+    });
+
+    it('reverts edit on Escape', async () => {
+      setupWithLicense();
+      store[DEFAULTS_KEY] = JSON.stringify({
+        hourlyRate: 20,
+        packaging: 0,
+        overhead: 0,
+        platformFees: 0,
+      });
+      const user = userEvent.setup();
+      render(<PantryPage />);
+
+      await user.click(screen.getByTestId('default-hourly-rate-value'));
+      const input = screen.getByTestId('default-hourly-rate-input');
+      await user.clear(input);
+      await user.type(input, '999{Escape}');
+
+      // Should revert to original value
+      await waitFor(() => {
+        expect(screen.getByTestId('default-hourly-rate-value')).toHaveTextContent('$20.00');
+      });
+    });
+
+    it('commits edit on blur', async () => {
+      setupWithLicense();
+      const user = userEvent.setup();
+      render(<PantryPage />);
+
+      await user.click(screen.getByTestId('default-overhead-value'));
+      const input = screen.getByTestId('default-overhead-input');
+      await user.clear(input);
+      await user.type(input, '8');
+      // Tab away to trigger blur
+      await user.tab();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('default-overhead-value')).toHaveTextContent('$8.00');
+      });
+    });
   });
 });

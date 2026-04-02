@@ -400,6 +400,97 @@
 }
 
 /* --------------------------------------------------------------------------
+   My Defaults section
+   -------------------------------------------------------------------------- */
+
+.defaults {
+  margin-top: var(--space-2xl);
+  padding-top: var(--space-xl);
+  border-top: 1px solid var(--border);
+}
+
+.defaults__heading {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-xl);
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.defaults__hint {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-lg);
+}
+
+.defaults__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+}
+
+.defaults__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+}
+
+.defaults__card-label {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.defaults__card-value {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-micro) var(--ease-enter);
+}
+
+.defaults__card-value:hover {
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.defaults__card-value:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.defaults__card-input {
+  width: 100%;
+  padding: var(--space-2xs) var(--space-xs);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.defaults__card-suffix {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
    Empty state
    -------------------------------------------------------------------------- */
 
@@ -436,6 +527,10 @@
     flex: 1;
   }
 
+  .defaults__grid {
+    grid-template-columns: 1fr;
+  }
+
   .pantry__th,
   .pantry__cell {
     padding: var(--space-xs);
@@ -461,7 +556,8 @@
   .pantry__delete-btn,
   .pantry__search,
   .pantry__add-input,
-  .pantry__nav-link {
+  .pantry__nav-link,
+  .defaults__card-value {
     transition: none;
   }
 }

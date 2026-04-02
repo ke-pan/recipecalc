@@ -1,9 +1,11 @@
 import { useState, useCallback, useRef, useEffect, type ChangeEvent, type KeyboardEvent } from 'react';
 import { LicenseProvider, useLicense } from '../../contexts/LicenseContext.js';
 import { usePantry } from '../../hooks/usePantry.js';
+import { useDefaults } from '../../hooks/useDefaults.js';
 import { WEIGHT_UNITS, VOLUME_UNITS, COUNT_UNITS } from '../../lib/units/conversion-factors.js';
 import { formatCurrency } from '../../lib/format.js';
 import type { PantryItem } from '../../types/pantry.js';
+import type { UserDefaults } from '../../types/pantry.js';
 import './pantry.css';
 
 // ---------------------------------------------------------------------------
@@ -447,12 +449,158 @@ function PantryTableRow({ item, onUpdate, onDelete, onError }: PantryTableRowPro
 }
 
 // ---------------------------------------------------------------------------
+// DefaultCard — inline-editable card for a single default value
+// ---------------------------------------------------------------------------
+
+interface DefaultCardProps {
+  label: string;
+  suffix: string;
+  value: number;
+  field: keyof UserDefaults;
+  onUpdate: (changes: Partial<UserDefaults>) => void;
+  testId: string;
+}
+
+function DefaultCard({ label, suffix, value, field, onUpdate, testId }: DefaultCardProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  useEffect(() => {
+    if (!editing) {
+      setDraft(String(value));
+    }
+  }, [value, editing]);
+
+  const commit = useCallback(() => {
+    setEditing(false);
+    const num = parseFloat(draft.trim());
+    if (!isNaN(num) && num >= 0 && num !== value) {
+      onUpdate({ [field]: num });
+    }
+  }, [draft, value, field, onUpdate]);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        commit();
+      } else if (e.key === 'Escape') {
+        setDraft(String(value));
+        setEditing(false);
+      }
+    },
+    [commit, value],
+  );
+
+  return (
+    <div className="defaults__card" data-testid={testId}>
+      <span className="defaults__card-label">{label}</span>
+      {editing ? (
+        <input
+          ref={inputRef}
+          className="defaults__card-input"
+          type="number"
+          value={draft}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={handleKeyDown}
+          aria-label={label}
+          data-testid={`${testId}-input`}
+          min="0"
+          step="any"
+        />
+      ) : (
+        <span
+          className="defaults__card-value"
+          onClick={() => setEditing(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setEditing(true);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label={`${label} (click to edit)`}
+          data-testid={`${testId}-value`}
+        >
+          {formatCurrency(value)}
+        </span>
+      )}
+      <span className="defaults__card-suffix">{suffix}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MyDefaults — section showing 4 default value cards
+// ---------------------------------------------------------------------------
+
+interface MyDefaultsProps {
+  defaults: UserDefaults;
+  onUpdate: (changes: Partial<UserDefaults>) => void;
+}
+
+function MyDefaults({ defaults, onUpdate }: MyDefaultsProps) {
+  return (
+    <section className="defaults" data-testid="my-defaults" aria-labelledby="defaults-heading">
+      <h2 id="defaults-heading" className="defaults__heading">My Defaults</h2>
+      <p className="defaults__hint">
+        Used by Calculator and Quick Add. Each recipe can override.
+      </p>
+      <div className="defaults__grid">
+        <DefaultCard
+          label="Hourly Rate"
+          suffix="$/hr"
+          value={defaults.hourlyRate}
+          field="hourlyRate"
+          onUpdate={onUpdate}
+          testId="default-hourly-rate"
+        />
+        <DefaultCard
+          label="Packaging"
+          suffix="$/batch"
+          value={defaults.packaging}
+          field="packaging"
+          onUpdate={onUpdate}
+          testId="default-packaging"
+        />
+        <DefaultCard
+          label="Overhead"
+          suffix="$/batch"
+          value={defaults.overhead}
+          field="overhead"
+          onUpdate={onUpdate}
+          testId="default-overhead"
+        />
+        <DefaultCard
+          label="Platform Fees"
+          suffix="$/batch"
+          value={defaults.platformFees}
+          field="platformFees"
+          onUpdate={onUpdate}
+          testId="default-platform-fees"
+        />
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // PantryContent — main content (needs LicenseContext + usePantry)
 // ---------------------------------------------------------------------------
 
 function PantryContent() {
   const { isUnlocked } = useLicense();
   const { pantry, add, update, remove, getReferencingRecipeCount } = usePantry();
+  const { defaults, update: updateDefaults } = useDefaults();
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PantryItem | null>(null);
@@ -599,6 +747,9 @@ function PantryContent() {
             onCancel={cancelDelete}
           />
         )}
+
+        {/* My Defaults */}
+        <MyDefaults defaults={defaults} onUpdate={updateDefaults} />
       </div>
     </div>
   );
