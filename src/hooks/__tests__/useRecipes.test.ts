@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useRecipes } from '../useRecipes.js';
 import type { Recipe } from '../../lib/calc/types.js';
-import type { SavedRecipe } from '../useRecipes.js';
+import type { SavedRecipe, ImportResult, ExportDataV2 } from '../useRecipes.js';
+import type { PantryItem } from '../../types/pantry.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -35,6 +36,19 @@ function makeSavedRecipe(overrides: Partial<SavedRecipe> = {}): SavedRecipe {
     updatedAt: '2026-03-30T12:00:00.000Z',
     recipe: makeRecipe(),
     targetCostRatio: 0.3,
+    ...overrides,
+  };
+}
+
+function makePantryItem(overrides: Partial<PantryItem> = {}): PantryItem {
+  return {
+    id: 'pantry-1',
+    name: 'All-Purpose Flour',
+    ingredientKey: 'all-purpose-flour',
+    purchaseUnit: 'lb',
+    purchaseAmount: 5,
+    purchasePrice: 4.99,
+    updatedAt: '2026-03-30T12:00:00.000Z',
     ...overrides,
   };
 }
@@ -334,27 +348,33 @@ describe('useRecipes', () => {
     });
   });
 
-  // ---- exportAll() ----
+  // ---- exportAll() — v2 format ----
 
   describe('exportAll()', () => {
-    it('returns JSON string of all recipes', () => {
+    it('returns v2 JSON with version, exportedAt, pantry, and recipes', () => {
       const recipes = [
         makeSavedRecipe({ id: 'r1', recipe: makeRecipe({ name: 'Cookies' }) }),
         makeSavedRecipe({ id: 'r2', recipe: makeRecipe({ name: 'Brownies' }) }),
       ];
       store[STORAGE_KEY] = JSON.stringify(recipes);
 
+      const pantry = [makePantryItem({ id: 'p1', name: 'Flour' })];
+
       const { result } = renderHook(() => useRecipes());
       let exported: string;
 
       act(() => {
-        exported = result.current.exportAll();
+        exported = result.current.exportAll(pantry);
       });
 
-      const parsed = JSON.parse(exported!);
-      expect(parsed).toHaveLength(2);
-      expect(parsed[0].id).toBe('r1');
-      expect(parsed[1].id).toBe('r2');
+      const parsed: ExportDataV2 = JSON.parse(exported!);
+      expect(parsed.version).toBe(2);
+      expect(parsed.exportedAt).toBeDefined();
+      expect(parsed.pantry).toHaveLength(1);
+      expect(parsed.pantry[0].id).toBe('p1');
+      expect(parsed.recipes).toHaveLength(2);
+      expect(parsed.recipes[0].id).toBe('r1');
+      expect(parsed.recipes[1].id).toBe('r2');
     });
 
     it('does not include license key data', () => {
@@ -369,7 +389,7 @@ describe('useRecipes', () => {
       let exported: string;
 
       act(() => {
-        exported = result.current.exportAll();
+        exported = result.current.exportAll([]);
       });
 
       // Exported JSON should not contain license data
@@ -378,150 +398,328 @@ describe('useRecipes', () => {
       expect(exported!).not.toContain('recipecalc_license');
     });
 
-    it('returns empty array JSON when no recipes exist', () => {
+    it('returns v2 JSON with empty arrays when no data exists', () => {
       const { result } = renderHook(() => useRecipes());
       let exported: string;
 
       act(() => {
-        exported = result.current.exportAll();
+        exported = result.current.exportAll([]);
       });
 
-      expect(JSON.parse(exported!)).toEqual([]);
+      const parsed: ExportDataV2 = JSON.parse(exported!);
+      expect(parsed.version).toBe(2);
+      expect(parsed.recipes).toEqual([]);
+      expect(parsed.pantry).toEqual([]);
+    });
+
+    it('includes exportedAt timestamp', () => {
+      const now = new Date('2026-04-01T10:00:00.000Z');
+      vi.setSystemTime(now);
+
+      const { result } = renderHook(() => useRecipes());
+      let exported: string;
+
+      act(() => {
+        exported = result.current.exportAll([]);
+      });
+
+      const parsed: ExportDataV2 = JSON.parse(exported!);
+      expect(parsed.exportedAt).toBe('2026-04-01T10:00:00.000Z');
+
+      vi.useRealTimers();
     });
   });
 
   // ---- importRecipes() ----
 
   describe('importRecipes()', () => {
-    it('imports valid recipes and deduplicates by id', () => {
-      store[STORAGE_KEY] = JSON.stringify([
-        makeSavedRecipe({ id: 'existing-1', recipe: makeRecipe({ name: 'Existing' }) }),
-      ]);
+    // ---- v1 format (array) ----
 
-      const incoming = JSON.stringify([
-        makeSavedRecipe({ id: 'existing-1', recipe: makeRecipe({ name: 'Duplicate' }) }),
-        makeSavedRecipe({ id: 'new-1', recipe: makeRecipe({ name: 'New Recipe' }) }),
-      ]);
+    describe('v1 format (array)', () => {
+      it('imports valid recipes and deduplicates by id', () => {
+        store[STORAGE_KEY] = JSON.stringify([
+          makeSavedRecipe({ id: 'existing-1', recipe: makeRecipe({ name: 'Existing' }) }),
+        ]);
 
-      const { result } = renderHook(() => useRecipes());
-      let importResult: { added: number; skipped: number };
+        const incoming = JSON.stringify([
+          makeSavedRecipe({ id: 'existing-1', recipe: makeRecipe({ name: 'Duplicate' }) }),
+          makeSavedRecipe({ id: 'new-1', recipe: makeRecipe({ name: 'New Recipe' }) }),
+        ]);
 
-      act(() => {
-        importResult = result.current.importRecipes(incoming);
+        const { result } = renderHook(() => useRecipes());
+        let importResult: ImportResult;
+
+        act(() => {
+          importResult = result.current.importRecipes(incoming);
+        });
+
+        expect(importResult!.added).toBe(1);
+        expect(importResult!.skipped).toBe(1);
+        expect(importResult!.pantryAdded).toBe(0);
+        expect(importResult!.pantrySkipped).toBe(0);
+        expect(result.current.recipes).toHaveLength(2);
+        // Existing recipe should NOT be overwritten
+        expect(result.current.recipes[0].recipe.name).toBe('Existing');
+        expect(result.current.recipes[1].id).toBe('new-1');
       });
 
-      expect(importResult!.added).toBe(1);
-      expect(importResult!.skipped).toBe(1);
-      expect(result.current.recipes).toHaveLength(2);
-      // Existing recipe should NOT be overwritten
-      expect(result.current.recipes[0].recipe.name).toBe('Existing');
-      expect(result.current.recipes[1].id).toBe('new-1');
-    });
-
-    it('does not overwrite existing recipes with imported ones', () => {
-      const original = makeSavedRecipe({
-        id: 'recipe-1',
-        recipe: makeRecipe({ name: 'Original' }),
-        targetCostRatio: 0.3,
-      });
-      store[STORAGE_KEY] = JSON.stringify([original]);
-
-      const incoming = JSON.stringify([
-        makeSavedRecipe({
+      it('does not overwrite existing recipes with imported ones', () => {
+        const original = makeSavedRecipe({
           id: 'recipe-1',
-          recipe: makeRecipe({ name: 'Import Override Attempt' }),
-          targetCostRatio: 0.5,
-        }),
-      ]);
+          recipe: makeRecipe({ name: 'Original' }),
+          targetCostRatio: 0.3,
+        });
+        store[STORAGE_KEY] = JSON.stringify([original]);
 
-      const { result } = renderHook(() => useRecipes());
+        const incoming = JSON.stringify([
+          makeSavedRecipe({
+            id: 'recipe-1',
+            recipe: makeRecipe({ name: 'Import Override Attempt' }),
+            targetCostRatio: 0.5,
+          }),
+        ]);
 
-      act(() => {
-        result.current.importRecipes(incoming);
+        const { result } = renderHook(() => useRecipes());
+
+        act(() => {
+          result.current.importRecipes(incoming);
+        });
+
+        expect(result.current.recipes).toHaveLength(1);
+        expect(result.current.recipes[0].recipe.name).toBe('Original');
+        expect(result.current.recipes[0].targetCostRatio).toBe(0.3);
       });
 
-      expect(result.current.recipes).toHaveLength(1);
-      expect(result.current.recipes[0].recipe.name).toBe('Original');
-      expect(result.current.recipes[0].targetCostRatio).toBe(0.3);
+      it('writes merged data to localStorage', () => {
+        store[STORAGE_KEY] = JSON.stringify([makeSavedRecipe({ id: 'existing-1' })]);
+
+        const incoming = JSON.stringify([
+          makeSavedRecipe({ id: 'new-1', recipe: makeRecipe({ name: 'Imported' }) }),
+        ]);
+
+        const { result } = renderHook(() => useRecipes());
+
+        act(() => {
+          result.current.importRecipes(incoming);
+        });
+
+        const stored = JSON.parse(store[STORAGE_KEY]);
+        expect(stored).toHaveLength(2);
+      });
+
+      it('filters out invalid entries from import data', () => {
+        const incoming = JSON.stringify([
+          makeSavedRecipe({ id: 'valid-1' }),
+          { id: 'bad', version: 99 }, // invalid
+          { id: 'also-bad' }, // missing fields
+        ]);
+
+        const { result } = renderHook(() => useRecipes());
+        let importResult: ImportResult;
+
+        act(() => {
+          importResult = result.current.importRecipes(incoming);
+        });
+
+        expect(importResult!.added).toBe(1);
+        expect(result.current.recipes).toHaveLength(1);
+        expect(result.current.recipes[0].id).toBe('valid-1');
+      });
+
+      it('imports into empty list successfully', () => {
+        const incoming = JSON.stringify([
+          makeSavedRecipe({ id: 'import-1' }),
+          makeSavedRecipe({ id: 'import-2', recipe: makeRecipe({ name: 'Brownies' }) }),
+        ]);
+
+        const { result } = renderHook(() => useRecipes());
+        let importResult: ImportResult;
+
+        act(() => {
+          importResult = result.current.importRecipes(incoming);
+        });
+
+        expect(importResult!.added).toBe(2);
+        expect(importResult!.skipped).toBe(0);
+        expect(result.current.recipes).toHaveLength(2);
+      });
+
+      it('returns zero pantry counts for v1 format', () => {
+        const incoming = JSON.stringify([
+          makeSavedRecipe({ id: 'import-1' }),
+        ]);
+
+        const { result } = renderHook(() => useRecipes());
+        let importResult: ImportResult;
+
+        act(() => {
+          importResult = result.current.importRecipes(incoming);
+        });
+
+        expect(importResult!.pantryAdded).toBe(0);
+        expect(importResult!.pantrySkipped).toBe(0);
+      });
     });
 
-    it('writes merged data to localStorage', () => {
-      store[STORAGE_KEY] = JSON.stringify([makeSavedRecipe({ id: 'existing-1' })]);
+    // ---- v2 format (object with version: 2) ----
 
-      const incoming = JSON.stringify([
-        makeSavedRecipe({ id: 'new-1', recipe: makeRecipe({ name: 'Imported' }) }),
-      ]);
+    describe('v2 format (object with version: 2)', () => {
+      it('imports recipes from v2 format', () => {
+        const v2Data: ExportDataV2 = {
+          version: 2,
+          exportedAt: '2026-04-01T10:00:00.000Z',
+          pantry: [],
+          recipes: [
+            makeSavedRecipe({ id: 'v2-recipe-1', recipe: makeRecipe({ name: 'V2 Cookie' }) }),
+          ],
+        };
 
-      const { result } = renderHook(() => useRecipes());
+        const { result } = renderHook(() => useRecipes());
+        let importResult: ImportResult;
 
-      act(() => {
-        result.current.importRecipes(incoming);
+        act(() => {
+          importResult = result.current.importRecipes(JSON.stringify(v2Data));
+        });
+
+        expect(importResult!.added).toBe(1);
+        expect(result.current.recipes).toHaveLength(1);
+        expect(result.current.recipes[0].recipe.name).toBe('V2 Cookie');
       });
 
-      const stored = JSON.parse(store[STORAGE_KEY]);
-      expect(stored).toHaveLength(2);
+      it('imports pantry items from v2 format when handler provided', () => {
+        const pantryItem = makePantryItem({ id: 'p1', name: 'Flour' });
+        const v2Data: ExportDataV2 = {
+          version: 2,
+          exportedAt: '2026-04-01T10:00:00.000Z',
+          pantry: [pantryItem],
+          recipes: [makeSavedRecipe({ id: 'v2-r1' })],
+        };
+
+        const mockImportPantry = vi.fn().mockReturnValue({ added: 1, skipped: 0 });
+
+        const { result } = renderHook(() => useRecipes());
+        let importResult: ImportResult;
+
+        act(() => {
+          importResult = result.current.importRecipes(JSON.stringify(v2Data), mockImportPantry);
+        });
+
+        expect(mockImportPantry).toHaveBeenCalledWith([pantryItem]);
+        expect(importResult!.pantryAdded).toBe(1);
+        expect(importResult!.pantrySkipped).toBe(0);
+        expect(importResult!.added).toBe(1);
+      });
+
+      it('does not import pantry items when no handler provided', () => {
+        const v2Data: ExportDataV2 = {
+          version: 2,
+          exportedAt: '2026-04-01T10:00:00.000Z',
+          pantry: [makePantryItem()],
+          recipes: [makeSavedRecipe({ id: 'v2-r1' })],
+        };
+
+        const { result } = renderHook(() => useRecipes());
+        let importResult: ImportResult;
+
+        act(() => {
+          importResult = result.current.importRecipes(JSON.stringify(v2Data));
+        });
+
+        expect(importResult!.pantryAdded).toBe(0);
+        expect(importResult!.pantrySkipped).toBe(0);
+        expect(importResult!.added).toBe(1);
+      });
+
+      it('handles v2 with empty recipes array', () => {
+        const v2Data: ExportDataV2 = {
+          version: 2,
+          exportedAt: '2026-04-01T10:00:00.000Z',
+          pantry: [makePantryItem()],
+          recipes: [],
+        };
+
+        const mockImportPantry = vi.fn().mockReturnValue({ added: 1, skipped: 0 });
+
+        const { result } = renderHook(() => useRecipes());
+        let importResult: ImportResult;
+
+        act(() => {
+          importResult = result.current.importRecipes(JSON.stringify(v2Data), mockImportPantry);
+        });
+
+        expect(importResult!.added).toBe(0);
+        expect(importResult!.pantryAdded).toBe(1);
+      });
+
+      it('deduplicates v2 recipes by id', () => {
+        store[STORAGE_KEY] = JSON.stringify([
+          makeSavedRecipe({ id: 'existing-1' }),
+        ]);
+
+        const v2Data: ExportDataV2 = {
+          version: 2,
+          exportedAt: '2026-04-01T10:00:00.000Z',
+          pantry: [],
+          recipes: [
+            makeSavedRecipe({ id: 'existing-1', recipe: makeRecipe({ name: 'Dup' }) }),
+            makeSavedRecipe({ id: 'new-v2', recipe: makeRecipe({ name: 'New V2' }) }),
+          ],
+        };
+
+        const { result } = renderHook(() => useRecipes());
+        let importResult: ImportResult;
+
+        act(() => {
+          importResult = result.current.importRecipes(JSON.stringify(v2Data));
+        });
+
+        expect(importResult!.added).toBe(1);
+        expect(importResult!.skipped).toBe(1);
+        expect(result.current.recipes).toHaveLength(2);
+      });
     });
 
-    it('handles invalid JSON gracefully', () => {
-      const { result } = renderHook(() => useRecipes());
-      let importResult: { added: number; skipped: number };
+    // ---- Error handling ----
 
-      act(() => {
-        importResult = result.current.importRecipes('{not valid json');
+    describe('error handling', () => {
+      it('handles invalid JSON gracefully', () => {
+        const { result } = renderHook(() => useRecipes());
+        let importResult: ImportResult;
+
+        act(() => {
+          importResult = result.current.importRecipes('{not valid json');
+        });
+
+        expect(importResult!.added).toBe(0);
+        expect(importResult!.skipped).toBe(0);
+        expect(importResult!.pantryAdded).toBe(0);
+        expect(importResult!.pantrySkipped).toBe(0);
+        expect(result.current.recipes).toEqual([]);
       });
 
-      expect(importResult!.added).toBe(0);
-      expect(importResult!.skipped).toBe(0);
-      expect(result.current.recipes).toEqual([]);
-    });
+      it('handles non-array non-v2 JSON gracefully', () => {
+        const { result } = renderHook(() => useRecipes());
+        let importResult: ImportResult;
 
-    it('handles non-array JSON gracefully', () => {
-      const { result } = renderHook(() => useRecipes());
-      let importResult: { added: number; skipped: number };
+        act(() => {
+          importResult = result.current.importRecipes(JSON.stringify({ not: 'valid', version: 1 }));
+        });
 
-      act(() => {
-        importResult = result.current.importRecipes(JSON.stringify({ not: 'array' }));
+        expect(importResult!.added).toBe(0);
+        expect(importResult!.skipped).toBe(0);
       });
 
-      expect(importResult!.added).toBe(0);
-      expect(importResult!.skipped).toBe(0);
-    });
+      it('handles object without version field gracefully', () => {
+        const { result } = renderHook(() => useRecipes());
+        let importResult: ImportResult;
 
-    it('filters out invalid entries from import data', () => {
-      const incoming = JSON.stringify([
-        makeSavedRecipe({ id: 'valid-1' }),
-        { id: 'bad', version: 99 }, // invalid
-        { id: 'also-bad' }, // missing fields
-      ]);
+        act(() => {
+          importResult = result.current.importRecipes(JSON.stringify({ recipes: [] }));
+        });
 
-      const { result } = renderHook(() => useRecipes());
-      let importResult: { added: number; skipped: number };
-
-      act(() => {
-        importResult = result.current.importRecipes(incoming);
+        expect(importResult!.added).toBe(0);
+        expect(importResult!.skipped).toBe(0);
       });
-
-      expect(importResult!.added).toBe(1);
-      expect(result.current.recipes).toHaveLength(1);
-      expect(result.current.recipes[0].id).toBe('valid-1');
-    });
-
-    it('imports into empty list successfully', () => {
-      const incoming = JSON.stringify([
-        makeSavedRecipe({ id: 'import-1' }),
-        makeSavedRecipe({ id: 'import-2', recipe: makeRecipe({ name: 'Brownies' }) }),
-      ]);
-
-      const { result } = renderHook(() => useRecipes());
-      let importResult: { added: number; skipped: number };
-
-      act(() => {
-        importResult = result.current.importRecipes(incoming);
-      });
-
-      expect(importResult!.added).toBe(2);
-      expect(importResult!.skipped).toBe(0);
-      expect(result.current.recipes).toHaveLength(2);
     });
   });
 
@@ -557,7 +755,7 @@ describe('useRecipes', () => {
   // ---- Roundtrip ----
 
   describe('roundtrip', () => {
-    it('save → export → import into fresh state preserves data', () => {
+    it('save → export v2 → import v2 into fresh state preserves data', () => {
       // Save some recipes
       const { result: r1 } = renderHook(() => useRecipes());
 
@@ -568,10 +766,11 @@ describe('useRecipes', () => {
         r1.current.save(makeRecipe({ name: 'Brownies' }), 0.25);
       });
 
-      // Export
+      // Export with pantry
+      const pantry = [makePantryItem({ id: 'p1', name: 'Flour' })];
       let exported: string;
       act(() => {
-        exported = r1.current.exportAll();
+        exported = r1.current.exportAll(pantry);
       });
 
       // Clear localStorage to simulate fresh browser
@@ -581,8 +780,10 @@ describe('useRecipes', () => {
       const { result: r2 } = renderHook(() => useRecipes());
       expect(r2.current.recipes).toEqual([]);
 
+      const mockImportPantry = vi.fn().mockReturnValue({ added: 1, skipped: 0 });
+
       act(() => {
-        r2.current.importRecipes(exported!);
+        r2.current.importRecipes(exported!, mockImportPantry);
       });
 
       expect(r2.current.recipes).toHaveLength(2);
@@ -590,6 +791,28 @@ describe('useRecipes', () => {
       expect(r2.current.recipes[0].targetCostRatio).toBe(0.3);
       expect(r2.current.recipes[1].recipe.name).toBe('Brownies');
       expect(r2.current.recipes[1].targetCostRatio).toBe(0.25);
+
+      // Pantry import handler should have been called
+      expect(mockImportPantry).toHaveBeenCalledWith(pantry);
+    });
+
+    it('v1 export can be imported as v1 format (backward compatibility)', () => {
+      // Simulate a v1 export (plain array)
+      const v1Export = JSON.stringify([
+        makeSavedRecipe({ id: 'v1-1', recipe: makeRecipe({ name: 'V1 Cookie' }) }),
+        makeSavedRecipe({ id: 'v1-2', recipe: makeRecipe({ name: 'V1 Brownie' }) }),
+      ]);
+
+      const { result } = renderHook(() => useRecipes());
+
+      let importResult: ImportResult;
+      act(() => {
+        importResult = result.current.importRecipes(v1Export);
+      });
+
+      expect(importResult!.added).toBe(2);
+      expect(importResult!.pantryAdded).toBe(0);
+      expect(result.current.recipes).toHaveLength(2);
     });
 
     it('uses laborAndOverhead naming (not hiddenCosts)', () => {

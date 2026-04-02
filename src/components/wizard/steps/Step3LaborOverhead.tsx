@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { Recipe, LaborAndOverhead } from '../../../lib/calc/types.js';
+import { useLicense } from '../../../contexts/LicenseContext.js';
+import { useDefaults } from '../../../hooks/useDefaults.js';
 import { formatCurrency } from '../../../lib/format.js';
 import './step3.css';
 
@@ -21,12 +23,38 @@ export default function Step3LaborOverhead({
   onValidChange,
 }: Step3Props) {
   const { laborAndOverhead, batchTimeHours } = recipe;
+  const { isUnlocked } = useLicense();
+  const { defaults } = useDefaults();
 
-  const [hourlyRate, setHourlyRate] = useState(String(laborAndOverhead.hourlyRate));
+  // For paid users: if recipe fields are all zero (fresh recipe), pre-fill from defaults.
+  // "Using defaults" means the user has non-zero defaults AND the recipe fields were all zero.
+  const hasNonZeroDefaults =
+    defaults.hourlyRate !== 0 ||
+    defaults.packaging !== 0 ||
+    defaults.overhead !== 0 ||
+    defaults.platformFees !== 0;
+
+  const recipeFieldsAllZero =
+    laborAndOverhead.hourlyRate === 0 &&
+    laborAndOverhead.packaging === 0 &&
+    laborAndOverhead.overhead === 0 &&
+    laborAndOverhead.platformFees === 0;
+
+  const shouldPreFill = isUnlocked && hasNonZeroDefaults && recipeFieldsAllZero;
+
+  const initialHourlyRate = shouldPreFill ? defaults.hourlyRate : laborAndOverhead.hourlyRate;
+  const initialPackaging = shouldPreFill ? defaults.packaging : laborAndOverhead.packaging;
+  const initialOverhead = shouldPreFill ? defaults.overhead : laborAndOverhead.overhead;
+  const initialPlatformFees = shouldPreFill ? defaults.platformFees : laborAndOverhead.platformFees;
+
+  const [hourlyRate, setHourlyRate] = useState(String(initialHourlyRate));
   const [laborTime, setLaborTime] = useState(String(batchTimeHours));
-  const [packaging, setPackaging] = useState(String(laborAndOverhead.packaging));
-  const [overhead, setOverhead] = useState(String(laborAndOverhead.overhead));
-  const [platformFees, setPlatformFees] = useState(String(laborAndOverhead.platformFees));
+  const [packaging, setPackaging] = useState(String(initialPackaging));
+  const [overhead, setOverhead] = useState(String(initialOverhead));
+  const [platformFees, setPlatformFees] = useState(String(initialPlatformFees));
+
+  // Track whether we're showing defaults (user hasn't manually changed the pre-filled values)
+  const [usingDefaults, setUsingDefaults] = useState(shouldPreFill);
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -89,6 +117,13 @@ export default function Step3LaborOverhead({
         </p>
       </header>
 
+      {/* Defaults hint for paid users */}
+      {usingDefaults && (
+        <p className="step3__defaults-hint" data-testid="defaults-hint">
+          Using your defaults. Edit any field to override.
+        </p>
+      )}
+
       {/* Hourly Rate */}
       <div className="step3__field">
         <label className="step3__label" htmlFor="step3-hourly-rate">
@@ -104,7 +139,7 @@ export default function Step3LaborOverhead({
             step="any"
             placeholder="15"
             value={hourlyRate}
-            onChange={(e) => setHourlyRate(e.target.value)}
+            onChange={(e) => { setHourlyRate(e.target.value); setUsingDefaults(false); }}
             onBlur={() => markTouched('hourlyRate')}
             aria-describedby={errors.hourlyRate ? 'step3-hourly-rate-error' : undefined}
             aria-invalid={!!errors.hourlyRate}
@@ -162,7 +197,7 @@ export default function Step3LaborOverhead({
             step="any"
             placeholder="0"
             value={packaging}
-            onChange={(e) => setPackaging(e.target.value)}
+            onChange={(e) => { setPackaging(e.target.value); setUsingDefaults(false); }}
             onBlur={() => markTouched('packaging')}
             aria-describedby={errors.packaging ? 'step3-packaging-error' : undefined}
             aria-invalid={!!errors.packaging}
@@ -188,7 +223,7 @@ export default function Step3LaborOverhead({
             step="any"
             placeholder="0"
             value={overhead}
-            onChange={(e) => setOverhead(e.target.value)}
+            onChange={(e) => { setOverhead(e.target.value); setUsingDefaults(false); }}
             onBlur={() => markTouched('overhead')}
             aria-describedby={errors.overhead ? 'step3-overhead-error' : undefined}
             aria-invalid={!!errors.overhead}
@@ -215,7 +250,7 @@ export default function Step3LaborOverhead({
             step="any"
             placeholder="0"
             value={platformFees}
-            onChange={(e) => setPlatformFees(e.target.value)}
+            onChange={(e) => { setPlatformFees(e.target.value); setUsingDefaults(false); }}
             onBlur={() => markTouched('platformFees')}
             aria-describedby={errors.platformFees ? 'step3-platform-fees-error' : undefined}
             aria-invalid={!!errors.platformFees}

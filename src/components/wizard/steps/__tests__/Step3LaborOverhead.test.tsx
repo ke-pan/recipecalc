@@ -1,7 +1,44 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Step3LaborOverhead from '../Step3LaborOverhead';
 import type { Recipe } from '../../../../lib/calc/types';
+
+// ---------------------------------------------------------------------------
+// Mock LicenseContext
+// ---------------------------------------------------------------------------
+
+let mockIsUnlocked = false;
+
+vi.mock('../../../../contexts/LicenseContext.js', () => ({
+  useLicense: () => ({
+    isUnlocked: mockIsUnlocked,
+    license: mockIsUnlocked ? { key: 'test' } : null,
+    activate: vi.fn(),
+    deactivate: vi.fn(),
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// Mock useDefaults
+// ---------------------------------------------------------------------------
+
+let mockDefaults = {
+  hourlyRate: 0,
+  packaging: 0,
+  overhead: 0,
+  platformFees: 0,
+};
+
+vi.mock('../../../../hooks/useDefaults.js', () => ({
+  useDefaults: () => ({
+    defaults: mockDefaults,
+    update: vi.fn(),
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 /** Build a minimal recipe for testing */
 function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
@@ -40,6 +77,28 @@ function renderStep3(
     ),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Setup / teardown
+// ---------------------------------------------------------------------------
+
+beforeEach(() => {
+  mockIsUnlocked = false;
+  mockDefaults = {
+    hourlyRate: 0,
+    packaging: 0,
+    overhead: 0,
+    platformFees: 0,
+  };
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 describe('Step3LaborOverhead', () => {
   // --- Rendering ---
@@ -116,7 +175,7 @@ describe('Step3LaborOverhead', () => {
 
   // --- Default values and editability ---
 
-  it('defaults all cost fields to 0', () => {
+  it('defaults all cost fields to 0 for free users', () => {
     renderStep3();
 
     expect((screen.getByLabelText(/Hourly rate/) as HTMLInputElement).value).toBe('0');
@@ -237,5 +296,166 @@ describe('Step3LaborOverhead', () => {
     expect(
       screen.getByText('Fixed platform or delivery fees'),
     ).toBeInTheDocument();
+  });
+
+  // --- UserDefaults pre-fill for paid users ---
+
+  describe('UserDefaults pre-fill (paid users)', () => {
+    it('pre-fills fields from defaults when user is paid and recipe fields are all zero', () => {
+      mockIsUnlocked = true;
+      mockDefaults = {
+        hourlyRate: 20,
+        packaging: 5,
+        overhead: 10,
+        platformFees: 3,
+      };
+
+      renderStep3();
+
+      expect((screen.getByLabelText(/Hourly rate/) as HTMLInputElement).value).toBe('20');
+      expect((screen.getByLabelText(/Packaging/) as HTMLInputElement).value).toBe('5');
+      expect((screen.getByLabelText(/Overhead/) as HTMLInputElement).value).toBe('10');
+      expect((screen.getByLabelText(/Platform fees/) as HTMLInputElement).value).toBe('3');
+    });
+
+    it('shows "Using your defaults" hint when defaults are active', () => {
+      mockIsUnlocked = true;
+      mockDefaults = {
+        hourlyRate: 20,
+        packaging: 5,
+        overhead: 10,
+        platformFees: 3,
+      };
+
+      renderStep3();
+
+      expect(screen.getByTestId('defaults-hint')).toBeInTheDocument();
+      expect(screen.getByText(/Using your defaults/)).toBeInTheDocument();
+    });
+
+    it('does not show defaults hint for free users even with defaults set', () => {
+      mockIsUnlocked = false;
+      mockDefaults = {
+        hourlyRate: 20,
+        packaging: 5,
+        overhead: 10,
+        platformFees: 3,
+      };
+
+      renderStep3();
+
+      expect(screen.queryByTestId('defaults-hint')).not.toBeInTheDocument();
+      // Should use recipe values (all zero), not defaults
+      expect((screen.getByLabelText(/Hourly rate/) as HTMLInputElement).value).toBe('0');
+    });
+
+    it('does not show defaults hint when defaults are all zero', () => {
+      mockIsUnlocked = true;
+      mockDefaults = {
+        hourlyRate: 0,
+        packaging: 0,
+        overhead: 0,
+        platformFees: 0,
+      };
+
+      renderStep3();
+
+      expect(screen.queryByTestId('defaults-hint')).not.toBeInTheDocument();
+    });
+
+    it('does not pre-fill from defaults when recipe already has non-zero values', () => {
+      mockIsUnlocked = true;
+      mockDefaults = {
+        hourlyRate: 20,
+        packaging: 5,
+        overhead: 10,
+        platformFees: 3,
+      };
+
+      renderStep3({
+        laborAndOverhead: {
+          hourlyRate: 18,
+          packaging: 4,
+          overhead: 8,
+          platformFees: 2,
+        },
+      });
+
+      // Should use recipe values, not defaults
+      expect((screen.getByLabelText(/Hourly rate/) as HTMLInputElement).value).toBe('18');
+      expect((screen.getByLabelText(/Packaging/) as HTMLInputElement).value).toBe('4');
+      expect((screen.getByLabelText(/Overhead/) as HTMLInputElement).value).toBe('8');
+      expect((screen.getByLabelText(/Platform fees/) as HTMLInputElement).value).toBe('2');
+      expect(screen.queryByTestId('defaults-hint')).not.toBeInTheDocument();
+    });
+
+    it('dismisses defaults hint when user changes a field', () => {
+      mockIsUnlocked = true;
+      mockDefaults = {
+        hourlyRate: 20,
+        packaging: 5,
+        overhead: 10,
+        platformFees: 3,
+      };
+
+      renderStep3();
+
+      expect(screen.getByTestId('defaults-hint')).toBeInTheDocument();
+
+      // Edit hourly rate to override
+      const hourlyRateInput = screen.getByLabelText(/Hourly rate/);
+      fireEvent.change(hourlyRateInput, { target: { value: '25' } });
+
+      // Hint should disappear
+      expect(screen.queryByTestId('defaults-hint')).not.toBeInTheDocument();
+    });
+
+    it('calls onUpdate with default values when pre-filled', () => {
+      mockIsUnlocked = true;
+      mockDefaults = {
+        hourlyRate: 20,
+        packaging: 5,
+        overhead: 10,
+        platformFees: 3,
+      };
+
+      const onUpdate = vi.fn();
+      renderStep3({}, onUpdate);
+
+      // Should call onUpdate with pre-filled default values
+      expect(onUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          hourlyRate: 20,
+          packaging: 5,
+          overhead: 10,
+          platformFees: 3,
+        }),
+      );
+    });
+
+    it('allows overriding default values without affecting globals', () => {
+      mockIsUnlocked = true;
+      mockDefaults = {
+        hourlyRate: 20,
+        packaging: 5,
+        overhead: 10,
+        platformFees: 3,
+      };
+
+      const onUpdate = vi.fn();
+      renderStep3({}, onUpdate);
+
+      // Override hourly rate
+      const hourlyRateInput = screen.getByLabelText(/Hourly rate/);
+      fireEvent.change(hourlyRateInput, { target: { value: '25' } });
+
+      // onUpdate should be called with the overridden value
+      expect(onUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ hourlyRate: 25 }),
+      );
+
+      // Defaults should remain unchanged (they are not mutated)
+      expect(mockDefaults.hourlyRate).toBe(20);
+    });
   });
 });
