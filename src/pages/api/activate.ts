@@ -15,7 +15,7 @@ const LS_API = 'https://api.lemonsqueezy.com/v1/licenses/activate';
 const INSTANCE_NAME = 'recipecalc-web';
 const MAX_KEY_LENGTH = 256;
 
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   // Parse request body
   let key: string;
   try {
@@ -29,9 +29,9 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   }
 
   // Fail fast if env vars are missing
-  const storeId = getEnv(locals, 'PUBLIC_LS_STORE_ID');
-  const productId = getEnv(locals, 'PUBLIC_LS_PRODUCT_ID');
-  const secret = getEnv(locals, 'SESSION_SECRET');
+  const storeId = getEnv('PUBLIC_LS_STORE_ID');
+  const productId = getEnv('PUBLIC_LS_PRODUCT_ID');
+  const secret = getEnv('SESSION_SECRET');
   if (!storeId || !productId) {
     console.error('[activate] PUBLIC_LS_STORE_ID or PUBLIC_LS_PRODUCT_ID not configured');
     return jsonResponse({ ok: false, reason: 'network' }, 500);

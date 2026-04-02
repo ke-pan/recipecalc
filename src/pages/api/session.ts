@@ -11,13 +11,13 @@ import { getEnv, jsonResponse } from '../../lib/server/env';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ cookies, locals }) => {
+export const GET: APIRoute = async ({ cookies }) => {
   const token = cookies.get(COOKIE_NAME)?.value;
   if (!token) {
     return jsonResponse({ unlocked: false });
   }
 
-  const secret = getEnv(locals, 'SESSION_SECRET');
+  const secret = getEnv('SESSION_SECRET');
   if (!secret) {
     console.error('[session] SESSION_SECRET not configured');
     return jsonResponse({ unlocked: false });
