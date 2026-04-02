@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { trackEvent, EVENTS, type EventName } from '../analytics';
 
 describe('EVENTS constants', () => {
-  it('exports exactly 12 event names', () => {
-    expect(Object.keys(EVENTS)).toHaveLength(12);
+  it('exports exactly 13 event names', () => {
+    expect(Object.keys(EVENTS)).toHaveLength(13);
   });
 
   it.each([
@@ -17,6 +17,7 @@ describe('EVENTS constants', () => {
     ['COPY_RESULT', 'copy_result'],
     ['SAVE_RECIPE', 'save_recipe'],
     ['EXPORT_JSON', 'export_json'],
+    ['IMPORT_JSON', 'import_json'],
     ['RESUME_RECIPE', 'resume_recipe'],
     ['NEW_RECIPE', 'new_recipe'],
   ] as const)('EVENTS.%s === "%s"', (key, value) => {

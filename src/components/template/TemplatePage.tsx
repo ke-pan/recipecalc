@@ -8,6 +8,7 @@ import { calculateTotalCosts, calculateIngredientCost, calculatePricing } from '
 import { formatCurrency } from '../../lib/format.js';
 import type { Ingredient, Recipe } from '../../lib/calc/types.js';
 import type { PantryItem } from '../../types/pantry.js';
+import { trackEvent, EVENTS } from '../../lib/analytics.js';
 import QuickAddForm from './QuickAddForm.js';
 import './template.css';
 
@@ -485,7 +486,8 @@ function TemplateContent() {
     a.download = 'recipecalc-recipes.json';
     a.click();
     URL.revokeObjectURL(url);
-  }, [exportAll, pantry]);
+    trackEvent(EVENTS.EXPORT_JSON, { count: String(recipes.length) });
+  }, [exportAll, pantry, recipes.length]);
 
   const handleImport = useCallback(() => {
     const input = document.createElement('input');
@@ -497,7 +499,10 @@ function TemplateContent() {
       const reader = new FileReader();
       reader.onload = () => {
         const json = reader.result as string;
-        importRecipes(json, importPantryItems);
+        const result = importRecipes(json, importPantryItems);
+        if (result.added > 0) {
+          trackEvent(EVENTS.IMPORT_JSON, { added: String(result.added) });
+        }
       };
       reader.readAsText(file);
     };

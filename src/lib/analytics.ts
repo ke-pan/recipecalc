@@ -25,6 +25,7 @@ export const EVENTS = {
   COPY_RESULT: 'copy_result',
   SAVE_RECIPE: 'save_recipe',
   EXPORT_JSON: 'export_json',
+  IMPORT_JSON: 'import_json',
   RESUME_RECIPE: 'resume_recipe',
   NEW_RECIPE: 'new_recipe',
 } as const;

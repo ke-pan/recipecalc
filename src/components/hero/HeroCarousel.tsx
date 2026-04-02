@@ -115,7 +115,7 @@ export default function HeroCarousel() {
           Add your ingredients, labor, and overhead. See your true cost in minutes.
         </p>
 
-        <a href="/calculator" className="hero__cta">
+        <a href="/calculator" className="hero__cta" data-umami-event="hero_cta_click">
           Calculate your true cost — free
         </a>
 

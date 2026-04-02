@@ -119,14 +119,19 @@ const LicenseContext = createContext<LicenseContextValue | null>(null);
 // Provider
 // ---------------------------------------------------------------------------
 
+// Temporary paywall bypass — set PUBLIC_FORCE_UNLOCK to "true" in wrangler.toml [vars].
+// Remove this flag (and the checks below) once LemonSqueezy is configured.
+const FORCE_UNLOCK = import.meta.env.PUBLIC_FORCE_UNLOCK === 'true';
+
 export function LicenseProvider({ children }: { children: ReactNode }) {
   // Initialize from localStorage hint (prevents UI flicker for paid users)
-  const [isUnlocked, setIsUnlocked] = useState(() => readHint() !== null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [license, setLicense] = useState<LicenseInfo | null>(() => readHint());
+  const [isUnlocked, setIsUnlocked] = useState(() => FORCE_UNLOCK || readHint() !== null);
+  const [isLoading, setIsLoading] = useState(!FORCE_UNLOCK);
+  const [license, setLicense] = useState<LicenseInfo | null>(() => FORCE_UNLOCK ? null : readHint());
 
   // Verify with server — server cookie is the real authority
   useEffect(() => {
+    if (FORCE_UNLOCK) return;
     fetchSession().then((data) => {
       setIsUnlocked(data.unlocked);
       if (data.unlocked && data.keyPrefix) {

@@ -190,27 +190,27 @@ const description =
       <h2 class="section-heading" style="text-align:center;margin-bottom:36px">Common questions</h2>
       <div class="faq__list">
         <details class="faq-item">
-          <summary>Is this recipe cost calculator really free?</summary>
+          <summary data-faq="free">Is this recipe cost calculator really free?</summary>
           <div class="faq-item__answer">The cost breakdown is free. You'll see your true recipe cost, the gap between ingredient cost and real cost, and a full breakdown of hidden costs. The paid version ($19 one-time, not a subscription) adds a recommended selling price with adjustable margin, recipe saving, and export.</div>
         </details>
         <details class="faq-item">
-          <summary>How do you calculate the cost of a recipe?</summary>
+          <summary data-faq="how-calculate">How do you calculate the cost of a recipe?</summary>
           <div class="faq-item__answer">We add up four layers: ingredient costs (with unit conversion so you can mix cups, grams, and pounds), labor cost (your hourly rate times batch time), packaging and overhead (utilities, kitchen rental, etc.), and platform fees (Etsy, farmers market booth, delivery apps, etc.). Most recipe calculators only handle the first layer.</div>
         </details>
         <details class="faq-item">
-          <summary>How should I price my homemade food products?</summary>
+          <summary data-faq="pricing">How should I price my homemade food products?</summary>
           <div class="faq-item__answer">A common rule of thumb is that ingredient costs should be 25-35% of your selling price. But many home food makers forget to include their labor, packaging, and overhead. Our calculator shows your true total cost and suggests a price based on your target profit margin. For example, if your cookies cost $2.44 each to make (including labor), a 30% cost target means selling at $8.13. Works for baked goods, ice cream, sauces, prepared meals, and more.</div>
         </details>
         <details class="faq-item">
-          <summary>Where is my recipe data stored?</summary>
+          <summary data-faq="data-storage">Where is my recipe data stored?</summary>
           <div class="faq-item__answer">Everything stays on your device in your browser's local storage. There are no accounts, no servers, no cloud sync. Your recipes never leave your computer. You can export them as a JSON backup file anytime and import them on another device.</div>
         </details>
         <details class="faq-item">
-          <summary>Does this work for cakes, ice cream, BBQ, and other foods?</summary>
+          <summary data-faq="other-foods">Does this work for cakes, ice cream, BBQ, and other foods?</summary>
           <div class="faq-item__answer">Yes. RecipeCalc works for any food product: cakes, cookies, ice cream, BBQ, sauces, prepared meals, catering portions, and more. Enter your ingredients and quantities, add your time and overhead, and get a true cost per serving or per batch. The unit converter handles weight, volume, and count conversions automatically.</div>
         </details>
         <details class="faq-item">
-          <summary>What if I sell on Etsy or at farmers markets?</summary>
+          <summary data-faq="etsy-farmers-market">What if I sell on Etsy or at farmers markets?</summary>
           <div class="faq-item__answer">Add your platform fees (like Etsy's ~15% transaction fee) as a fixed estimate in the overhead section. The calculator factors it into your true cost. We're working on a percentage-based fee mode for a future update so you can enter "15%" directly.</div>
         </details>
       </div>
@@ -222,9 +222,20 @@ const description =
     <div class="section__inner">
       <h2 class="final-cta__heading">Stop guessing.<br />Start pricing.</h2>
       <p class="final-cta__sub">Most home food makers undercharge by 40-60%. Find out where you stand in 3 minutes.</p>
-      <a href="/calculator" class="btn">Calculate your true cost — free</a>
+      <a href="/calculator" class="btn" data-umami-event="landing_cta_click">Calculate your true cost — free</a>
     </div>
   </section>
+
+  <script>
+    document.querySelectorAll('.faq-item').forEach((el) => {
+      el.addEventListener('toggle', () => {
+        if ((el as HTMLDetailsElement).open) {
+          const q = el.querySelector('summary')?.getAttribute('data-faq');
+          window.umami?.track('faq_open', { question: q ?? '' });
+        }
+      });
+    });
+  </script>
 
   <!-- Footer -->
   <footer class="landing-footer">

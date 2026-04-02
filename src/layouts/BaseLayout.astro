@@ -14,9 +14,6 @@ const {
 const canonicalUrl = Astro.url.href;
 const ogImageUrl = new URL(ogImage, Astro.site).href;
 
-const umamiWebsiteId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID;
-const umamiSrc = import.meta.env.PUBLIC_UMAMI_SRC;
-const enableUmami = import.meta.env.PROD && !!umamiWebsiteId && !!umamiSrc;
 ---
 
 <!doctype html>
@@ -51,8 +48,8 @@ const enableUmami = import.meta.env.PROD && !!umamiWebsiteId && !!umamiSrc;
 
     <title>{title}</title>
     <slot name="head" />
-    {enableUmami && (
-      <script defer src={umamiSrc} data-website-id={umamiWebsiteId}></script>
+    {import.meta.env.PROD && (
+      <script defer src="https://analytics.offshoot-labs.com/script.js" data-website-id="728b7a1b-aae6-4828-b9d7-89c94a24db0c"></script>
     )}
 
     <!-- Lemon.js: LemonSqueezy checkout overlay (deferred, loads after page) -->

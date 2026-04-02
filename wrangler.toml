@@ -7,6 +7,19 @@ routes = [
   { pattern = "www.recipepricer.com/*", zone_name = "recipepricer.com" },
 ]
 
+# Public env vars (client-visible, baked into build)
+# Fill in actual values before deploying
+[vars]
+PUBLIC_LS_STORE_ID = ""
+PUBLIC_LS_PRODUCT_ID = ""
+PUBLIC_LS_CHECKOUT_URL = ""
+# Temporary: unlock all features until LemonSqueezy is configured.
+# Set to "" or remove this line to re-enable the paywall.
+PUBLIC_FORCE_UNLOCK = "true"
+
+# SESSION_SECRET is a secret — set via:
+#   wrangler secret put SESSION_SECRET
+
 [observability]
 enabled = true
 
