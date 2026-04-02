@@ -4,20 +4,6 @@ import userEvent from '@testing-library/user-event';
 import ActivatePage from '../ActivatePage';
 
 // ---------------------------------------------------------------------------
-// Mock LemonSqueezy API
-// ---------------------------------------------------------------------------
-
-const mockActivate = vi.fn();
-
-vi.mock('../../../services/lemonsqueezy.js', () => ({
-  activateLicense: (...args: unknown[]) => mockActivate(...args),
-  _env: {
-    get storeId() { return '12345'; },
-    get productId() { return '67890'; },
-  },
-}));
-
-// ---------------------------------------------------------------------------
 // Mock analytics
 // ---------------------------------------------------------------------------
 
@@ -30,20 +16,6 @@ vi.mock('../../../lib/analytics', () => ({
     ACTIVATE_FAIL: 'activate_fail',
   },
 }));
-
-// ---------------------------------------------------------------------------
-// localStorage mock
-// ---------------------------------------------------------------------------
-
-const STORAGE_KEY = 'recipecalc_license';
-
-let store: Record<string, string> = {};
-
-const mockLocalStorage = {
-  getItem: vi.fn((key: string) => store[key] ?? null),
-  setItem: vi.fn((key: string, value: string) => { store[key] = value; }),
-  removeItem: vi.fn((key: string) => { delete store[key]; }),
-};
 
 // ---------------------------------------------------------------------------
 // matchMedia mock
@@ -69,14 +41,52 @@ function mockMatchMedia(matches: boolean) {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeLicenseJSON(overrides: Record<string, unknown> = {}): string {
-  return JSON.stringify({
-    key: 'test-key-123',
-    instanceId: 'instance-abc',
-    activatedAt: '2026-03-30T12:00:00.000Z',
-    storeId: '12345',
-    productId: '67890',
-    ...overrides,
+const HINT_KEY = 'recipecalc_license_hint';
+const OLD_KEY = 'recipecalc_license';
+
+/** Override fetch to make /api/activate fail with a specific reason. */
+function mockActivateFail(reason: string) {
+  vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input.toString();
+    if (url === '/api/activate') {
+      return new Response(JSON.stringify({ ok: false, reason }), { status: 401 });
+    }
+    if (url === '/api/session') {
+      return new Response(JSON.stringify({ unlocked: false }));
+    }
+    return new Response(JSON.stringify({}));
+  });
+}
+
+/** Override fetch to make /api/activate hang (never resolve). Returns a getter for the resolve fn. */
+function mockActivateHang() {
+  let resolveActivate!: (v: Response) => void;
+  vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input.toString();
+    if (url === '/api/activate') {
+      return new Promise<Response>((resolve) => {
+        resolveActivate = resolve;
+      });
+    }
+    if (url === '/api/session') {
+      return new Response(JSON.stringify({ unlocked: false }));
+    }
+    return new Response(JSON.stringify({}));
+  });
+  return () => resolveActivate;
+}
+
+/** Override fetch to make /api/activate throw a network error. */
+function mockActivateNetworkError() {
+  vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input.toString();
+    if (url === '/api/activate') {
+      throw new TypeError('Network error');
+    }
+    if (url === '/api/session') {
+      return new Response(JSON.stringify({ unlocked: false }));
+    }
+    return new Response(JSON.stringify({}));
   });
 }
 
@@ -85,22 +95,8 @@ function makeLicenseJSON(overrides: Record<string, unknown> = {}): string {
 // ---------------------------------------------------------------------------
 
 beforeEach(() => {
-  store = {};
-  mockActivate.mockReset();
   mockTrackEvent.mockClear();
   mockMatchMedia(false);
-  Object.defineProperty(globalThis, 'localStorage', {
-    value: mockLocalStorage,
-    writable: true,
-    configurable: true,
-  });
-  mockLocalStorage.getItem.mockImplementation((key: string) => store[key] ?? null);
-  mockLocalStorage.setItem.mockImplementation((key: string, value: string) => {
-    store[key] = value;
-  });
-  mockLocalStorage.removeItem.mockImplementation((key: string) => {
-    delete store[key];
-  });
 });
 
 afterEach(() => {
@@ -114,9 +110,11 @@ afterEach(() => {
 describe('ActivatePage', () => {
   // ---- Rendering ----
 
-  it('renders the activate page with title and input', () => {
+  it('renders the activate page with title and input', async () => {
     render(<ActivatePage />);
-    expect(screen.getByText('Activate your license')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Activate your license')).toBeInTheDocument();
+    });
     expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
     expect(screen.getByText('Activate')).toBeInTheDocument();
   });
@@ -128,22 +126,29 @@ describe('ActivatePage', () => {
     expect(logo.closest('a')).toHaveAttribute('href', '/');
   });
 
-  it('renders subtitle with instructions', () => {
+  it('renders subtitle with instructions', async () => {
     render(<ActivatePage />);
-    expect(screen.getByText('Enter the license key from your purchase email')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Enter the license key from your purchase email')).toBeInTheDocument();
+    });
   });
 
   // ---- IDLE state: button disabled when empty ----
 
-  it('disables Activate button when input is empty', () => {
+  it('disables Activate button when input is empty', async () => {
     render(<ActivatePage />);
-    const btn = screen.getByText('Activate');
-    expect(btn).toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByText('Activate')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Activate')).toBeDisabled();
   });
 
   it('disables Activate button when input contains only whitespace', async () => {
     const user = userEvent.setup();
     render(<ActivatePage />);
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
     const input = screen.getByPlaceholderText('Paste your license key');
     await user.type(input, '   ');
     expect(screen.getByText('Activate')).toBeDisabled();
@@ -152,6 +157,9 @@ describe('ActivatePage', () => {
   it('enables Activate button when key is entered', async () => {
     const user = userEvent.setup();
     render(<ActivatePage />);
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
     const input = screen.getByPlaceholderText('Paste your license key');
     await user.type(input, 'some-key');
     expect(screen.getByText('Activate')).not.toBeDisabled();
@@ -161,11 +169,14 @@ describe('ActivatePage', () => {
 
   it('shows "Activating..." and disables input during validation', async () => {
     // Make activate hang to observe validating state
-    let resolveActivate: (value: unknown) => void;
-    mockActivate.mockReturnValue(new Promise((resolve) => { resolveActivate = resolve; }));
+    const getResolve = mockActivateHang();
 
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     const input = screen.getByPlaceholderText('Paste your license key');
     await user.type(input, 'test-key');
@@ -174,21 +185,21 @@ describe('ActivatePage', () => {
     expect(screen.getByText('Activating...')).toBeInTheDocument();
     expect(input).toBeDisabled();
 
-    // Cleanup: resolve the promise
-    resolveActivate!({ ok: true, instanceId: 'id', activatedAt: '2026-01-01T00:00:00Z' });
+    // Cleanup: resolve the pending promise
+    getResolve()(new Response(JSON.stringify({
+      ok: true, instanceId: 'id', activatedAt: '2026-01-01T00:00:00Z',
+    })));
   });
 
   // ---- SUCCESS state ----
 
   it('shows success state after valid key activation', async () => {
-    mockActivate.mockResolvedValueOnce({
-      ok: true,
-      instanceId: 'new-instance',
-      activatedAt: '2026-03-30T14:00:00.000Z',
-    });
-
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     const input = screen.getByPlaceholderText('Paste your license key');
     await user.type(input, 'valid-key');
@@ -203,15 +214,13 @@ describe('ActivatePage', () => {
     expect(screen.getByText(/Start calculating/).closest('a')).toHaveAttribute('href', '/calculator');
   });
 
-  it('saves license to localStorage on success', async () => {
-    mockActivate.mockResolvedValueOnce({
-      ok: true,
-      instanceId: 'persist-instance',
-      activatedAt: '2026-03-30T14:00:00.000Z',
-    });
-
+  it('saves license hint to localStorage on success', async () => {
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), 'persist-key');
     await user.click(screen.getByText('Activate'));
@@ -220,18 +229,22 @@ describe('ActivatePage', () => {
       expect(screen.getByText("You're unlocked!")).toBeInTheDocument();
     });
 
-    const stored = JSON.parse(store[STORAGE_KEY]);
-    expect(stored.key).toBe('persist-key');
-    expect(stored.instanceId).toBe('persist-instance');
+    expect(localStorage.getItem(HINT_KEY)).not.toBeNull();
+    const hint = JSON.parse(localStorage.getItem(HINT_KEY)!);
+    expect(hint.keyPrefix).toBe('persist-');
   });
 
   // ---- ERROR states ----
 
   it('shows "Invalid key" error for invalid reason', async () => {
-    mockActivate.mockResolvedValueOnce({ ok: false, reason: 'invalid' });
+    mockActivateFail('invalid');
 
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), 'bad-key');
     await user.click(screen.getByText('Activate'));
@@ -243,10 +256,14 @@ describe('ActivatePage', () => {
   });
 
   it('shows "wrong product" error for wrong_product reason', async () => {
-    mockActivate.mockResolvedValueOnce({ ok: false, reason: 'wrong_product' });
+    mockActivateFail('wrong_product');
 
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), 'wrong-key');
     await user.click(screen.getByText('Activate'));
@@ -257,10 +274,14 @@ describe('ActivatePage', () => {
   });
 
   it('shows "limit reached" error for limit_reached reason', async () => {
-    mockActivate.mockResolvedValueOnce({ ok: false, reason: 'limit_reached' });
+    mockActivateFail('limit_reached');
 
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), 'maxed-key');
     await user.click(screen.getByText('Activate'));
@@ -270,11 +291,15 @@ describe('ActivatePage', () => {
     });
   });
 
-  it('shows "network error" for network reason', async () => {
-    mockActivate.mockResolvedValueOnce({ ok: false, reason: 'network' });
+  it('shows "network error" for network failure', async () => {
+    mockActivateNetworkError();
 
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), 'net-key');
     await user.click(screen.getByText('Activate'));
@@ -285,10 +310,14 @@ describe('ActivatePage', () => {
   });
 
   it('error message has role="alert" for accessibility', async () => {
-    mockActivate.mockResolvedValueOnce({ ok: false, reason: 'invalid' });
+    mockActivateFail('invalid');
 
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), 'bad');
     await user.click(screen.getByText('Activate'));
@@ -305,11 +334,14 @@ describe('ActivatePage', () => {
   });
 
   it('announces validating state to screen readers via aria-live', async () => {
-    let resolveActivate: (value: unknown) => void;
-    mockActivate.mockReturnValue(new Promise((resolve) => { resolveActivate = resolve; }));
+    const getResolve = mockActivateHang();
 
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     const input = screen.getByPlaceholderText('Paste your license key');
     await user.type(input, 'test-key');
@@ -319,17 +351,23 @@ describe('ActivatePage', () => {
     const statusRegion = screen.getByTestId('activate-status');
     expect(statusRegion).toHaveTextContent('Validating your license key...');
 
-    // Cleanup: resolve the promise
-    resolveActivate!({ ok: true, instanceId: 'id', activatedAt: '2026-01-01T00:00:00Z' });
+    // Cleanup: resolve the pending promise
+    getResolve()(new Response(JSON.stringify({
+      ok: true, instanceId: 'id', activatedAt: '2026-01-01T00:00:00Z',
+    })));
   });
 
   // ---- Retry (ERROR → IDLE) ----
 
   it('allows retry after error via "Try again" button', async () => {
-    mockActivate.mockResolvedValueOnce({ ok: false, reason: 'network' });
+    mockActivateFail('network');
 
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), 'retry-key');
     await user.click(screen.getByText('Activate'));
@@ -347,10 +385,14 @@ describe('ActivatePage', () => {
   });
 
   it('clears error when user types in input', async () => {
-    mockActivate.mockResolvedValueOnce({ ok: false, reason: 'invalid' });
+    mockActivateFail('invalid');
 
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     const input = screen.getByPlaceholderText('Paste your license key');
     await user.type(input, 'bad');
@@ -368,27 +410,49 @@ describe('ActivatePage', () => {
 
   // ---- Already activated user ----
 
-  it('shows already-activated state when license exists in localStorage', () => {
-    store[STORAGE_KEY] = makeLicenseJSON();
+  it('shows already-activated state when license exists in localStorage', async () => {
+    // Set old-format key — the fetch mock in setup.ts detects it and returns unlocked
+    localStorage.setItem(OLD_KEY, JSON.stringify({
+      key: 'test-key-123', instanceId: 'instance-abc',
+      activatedAt: '2026-03-30T12:00:00.000Z', storeId: '12345', productId: '67890',
+    }));
+
     render(<ActivatePage />);
 
-    expect(screen.getByTestId('already-activated')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('already-activated')).toBeInTheDocument();
+    });
     expect(screen.getByText('Already activated')).toBeInTheDocument();
     expect(screen.getByText('Go to calculator')).toBeInTheDocument();
     expect(screen.getByText('Go to calculator').closest('a')).toHaveAttribute('href', '/calculator');
   });
 
-  it('shows truncated key in already-activated state', () => {
-    store[STORAGE_KEY] = makeLicenseJSON({ key: 'abcdefghijklmnop' });
+  it('shows truncated key in already-activated state', async () => {
+    localStorage.setItem(OLD_KEY, JSON.stringify({
+      key: 'abcdefghijklmnop', instanceId: 'instance-abc',
+      activatedAt: '2026-03-30T12:00:00.000Z', storeId: '12345', productId: '67890',
+    }));
+
     render(<ActivatePage />);
 
-    expect(screen.getByText('abcdefgh...')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('already-activated')).toBeInTheDocument();
+    });
+    // The fetch mock returns keyPrefix: 'test-key' for any old-format key
+    expect(screen.getByText('test-key...')).toBeInTheDocument();
   });
 
-  it('does not show activate form when already activated', () => {
-    store[STORAGE_KEY] = makeLicenseJSON();
+  it('does not show activate form when already activated', async () => {
+    localStorage.setItem(OLD_KEY, JSON.stringify({
+      key: 'test-key-123', instanceId: 'instance-abc',
+      activatedAt: '2026-03-30T12:00:00.000Z', storeId: '12345', productId: '67890',
+    }));
+
     render(<ActivatePage />);
 
+    await waitFor(() => {
+      expect(screen.getByTestId('already-activated')).toBeInTheDocument();
+    });
     expect(screen.queryByPlaceholderText('Paste your license key')).not.toBeInTheDocument();
     expect(screen.queryByText('Activate your license')).not.toBeInTheDocument();
   });
@@ -396,14 +460,12 @@ describe('ActivatePage', () => {
   // ---- Persistence roundtrip (refresh simulation) ----
 
   it('persists license across remounts (page refresh)', async () => {
-    mockActivate.mockResolvedValueOnce({
-      ok: true,
-      instanceId: 'roundtrip-instance',
-      activatedAt: '2026-03-30T14:00:00.000Z',
-    });
-
     const user = userEvent.setup();
     const { unmount } = render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), 'roundtrip-key');
     await user.click(screen.getByText('Activate'));
@@ -414,10 +476,13 @@ describe('ActivatePage', () => {
 
     unmount();
 
-    // Re-render simulates page refresh
+    // Re-render simulates page refresh — the hint is now in localStorage,
+    // so the fetch mock returns unlocked: true for /api/session
     render(<ActivatePage />);
 
-    expect(screen.getByTestId('already-activated')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('already-activated')).toBeInTheDocument();
+    });
     expect(screen.getByText('Already activated')).toBeInTheDocument();
   });
 
@@ -425,14 +490,13 @@ describe('ActivatePage', () => {
 
   it('renders confetti on success when motion is not reduced', async () => {
     mockMatchMedia(false);
-    mockActivate.mockResolvedValueOnce({
-      ok: true,
-      instanceId: 'id',
-      activatedAt: '2026-01-01T00:00:00Z',
-    });
 
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), 'key');
     await user.click(screen.getByText('Activate'));
@@ -447,14 +511,13 @@ describe('ActivatePage', () => {
 
   it('does not render confetti when prefers-reduced-motion is set', async () => {
     mockMatchMedia(true);
-    mockActivate.mockResolvedValueOnce({
-      ok: true,
-      instanceId: 'id',
-      activatedAt: '2026-01-01T00:00:00Z',
-    });
 
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), 'key');
     await user.click(screen.getByText('Activate'));
@@ -470,50 +533,65 @@ describe('ActivatePage', () => {
   // ---- Form submission ----
 
   it('trims whitespace from key before activating', async () => {
-    mockActivate.mockResolvedValueOnce({
-      ok: true,
-      instanceId: 'id',
-      activatedAt: '2026-01-01T00:00:00Z',
-    });
-
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), '  trimmed-key  ');
     await user.click(screen.getByText('Activate'));
 
-    expect(mockActivate).toHaveBeenCalledWith('trimmed-key');
+    await waitFor(() => {
+      expect(screen.getByText("You're unlocked!")).toBeInTheDocument();
+    });
+
+    // Verify the key was trimmed by checking the fetch call
+    const activateCall = vi.mocked(fetch).mock.calls.find(
+      (call) => {
+        const url = typeof call[0] === 'string' ? call[0] : call[0].toString();
+        return url === '/api/activate';
+      },
+    );
+    expect(activateCall).toBeDefined();
+    const body = JSON.parse(String(activateCall![1]?.body));
+    expect(body.key).toBe('trimmed-key');
   });
 
   it('submits form via Enter key', async () => {
-    mockActivate.mockResolvedValueOnce({
-      ok: true,
-      instanceId: 'id',
-      activatedAt: '2026-01-01T00:00:00Z',
-    });
-
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     const input = screen.getByPlaceholderText('Paste your license key');
     await user.type(input, 'enter-key{Enter}');
 
     await waitFor(() => {
-      expect(mockActivate).toHaveBeenCalledWith('enter-key');
+      const activateCall = vi.mocked(fetch).mock.calls.find(
+        (call) => {
+          const url = typeof call[0] === 'string' ? call[0] : call[0].toString();
+          return url === '/api/activate';
+        },
+      );
+      expect(activateCall).toBeDefined();
+      const body = JSON.parse(String(activateCall![1]?.body));
+      expect(body.key).toBe('enter-key');
     });
   });
 
   // ---- Analytics events ----
 
   it('fires ACTIVATE_SUCCESS with channel "manual" on successful activation', async () => {
-    mockActivate.mockResolvedValueOnce({
-      ok: true,
-      instanceId: 'id',
-      activatedAt: '2026-01-01T00:00:00Z',
-    });
-
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), 'good-key');
     await user.click(screen.getByText('Activate'));
@@ -524,10 +602,14 @@ describe('ActivatePage', () => {
   });
 
   it('fires ACTIVATE_FAIL with reason on failed activation', async () => {
-    mockActivate.mockResolvedValueOnce({ ok: false, reason: 'invalid' });
+    mockActivateFail('invalid');
 
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), 'bad-key');
     await user.click(screen.getByText('Activate'));
@@ -538,10 +620,14 @@ describe('ActivatePage', () => {
   });
 
   it('fires ACTIVATE_FAIL with network reason on network error', async () => {
-    mockActivate.mockResolvedValueOnce({ ok: false, reason: 'network' });
+    mockActivateNetworkError();
 
     const user = userEvent.setup();
     render(<ActivatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Paste your license key')).toBeInTheDocument();
+    });
 
     await user.type(screen.getByPlaceholderText('Paste your license key'), 'net-key');
     await user.click(screen.getByText('Activate'));

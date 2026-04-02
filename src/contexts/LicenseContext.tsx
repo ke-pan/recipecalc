@@ -2,31 +2,37 @@ import {
   createContext,
   useContext,
   useState,
+  useEffect,
   useCallback,
   useMemo,
   type ReactNode,
 } from 'react';
-import {
-  activateLicense as apiActivate,
-  _env as lsEnv,
-  type ActivateResult,
-} from '../services/lemonsqueezy.js';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export interface LicenseData {
-  key: string;
+export type ActivateSuccess = {
+  ok: true;
   instanceId: string;
   activatedAt: string;
-  storeId: string;
-  productId: string;
+};
+
+export type ActivateFailure = {
+  ok: false;
+  reason: 'invalid' | 'wrong_product' | 'limit_reached' | 'network';
+};
+
+export type ActivateResult = ActivateSuccess | ActivateFailure;
+
+export interface LicenseInfo {
+  keyPrefix: string;
 }
 
 export interface LicenseState {
   isUnlocked: boolean;
-  license: LicenseData | null;
+  isLoading: boolean;
+  license: LicenseInfo | null;
 }
 
 export interface LicenseActions {
@@ -37,54 +43,70 @@ export interface LicenseActions {
 type LicenseContextValue = LicenseState & LicenseActions;
 
 // ---------------------------------------------------------------------------
-// Constants
+// localStorage hint (UI only — not a security boundary)
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = 'recipecalc_license';
+const HINT_KEY = 'recipecalc_license_hint';
+const OLD_KEY = 'recipecalc_license';
 
-// ---------------------------------------------------------------------------
-// localStorage helpers (mirror useRecipePersistence pattern)
-// ---------------------------------------------------------------------------
-
-function safeStorage<T>(fn: () => T): T | undefined {
+function readHint(): { keyPrefix: string } | null {
   try {
-    return fn();
+    // New hint format
+    const raw = localStorage.getItem(HINT_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (typeof data?.keyPrefix === 'string') return data;
+    }
+
+    // Legacy format: use as hint but don't delete until server confirms
+    const old = localStorage.getItem(OLD_KEY);
+    if (old) {
+      const data = JSON.parse(old);
+      if (typeof data?.key === 'string') {
+        return { keyPrefix: data.key.slice(0, 8) };
+      }
+    }
+
+    return null;
   } catch {
-    return undefined;
+    return null;
   }
 }
 
-function isValidLicenseData(data: unknown): data is LicenseData {
-  if (!data || typeof data !== 'object') return false;
-  const d = data as Record<string, unknown>;
-  return (
-    typeof d.key === 'string' &&
-    d.key.length > 0 &&
-    typeof d.instanceId === 'string' &&
-    typeof d.activatedAt === 'string' &&
-    typeof d.storeId === 'string' &&
-    typeof d.productId === 'string'
-  );
+function writeHint(keyPrefix: string): void {
+  try {
+    localStorage.setItem(HINT_KEY, JSON.stringify({ keyPrefix }));
+  } catch {}
 }
 
-function readLicense(): LicenseData | null {
-  const raw = safeStorage(() => localStorage.getItem(STORAGE_KEY));
-  if (!raw) return null;
-
-  const parsed = safeStorage(() => JSON.parse(raw));
-  if (isValidLicenseData(parsed)) return parsed;
-
-  // Corrupt data — clean up
-  safeStorage(() => localStorage.removeItem(STORAGE_KEY));
-  return null;
+function clearHint(): void {
+  try {
+    localStorage.removeItem(HINT_KEY);
+  } catch {}
 }
 
-function writeLicense(data: LicenseData): void {
-  safeStorage(() => localStorage.setItem(STORAGE_KEY, JSON.stringify(data)));
+// ---------------------------------------------------------------------------
+// Session check (deduplicated across multiple LicenseProvider instances)
+// ---------------------------------------------------------------------------
+
+interface SessionResponse {
+  unlocked: boolean;
+  keyPrefix?: string;
 }
 
-function clearLicense(): void {
-  safeStorage(() => localStorage.removeItem(STORAGE_KEY));
+let sessionPromise: Promise<SessionResponse> | null = null;
+
+function fetchSession(): Promise<SessionResponse> {
+  if (!sessionPromise) {
+    sessionPromise = fetch('/api/session')
+      .then((r) => r.json() as Promise<SessionResponse>)
+      .catch(() => ({ unlocked: false }));
+  }
+  return sessionPromise;
+}
+
+function invalidateSession(): void {
+  sessionPromise = null;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,37 +120,73 @@ const LicenseContext = createContext<LicenseContextValue | null>(null);
 // ---------------------------------------------------------------------------
 
 export function LicenseProvider({ children }: { children: ReactNode }) {
-  const [license, setLicense] = useState<LicenseData | null>(() => readLicense());
+  // Initialize from localStorage hint (prevents UI flicker for paid users)
+  const [isUnlocked, setIsUnlocked] = useState(() => readHint() !== null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [license, setLicense] = useState<LicenseInfo | null>(() => readHint());
+
+  // Verify with server — server cookie is the real authority
+  useEffect(() => {
+    fetchSession().then((data) => {
+      setIsUnlocked(data.unlocked);
+      if (data.unlocked && data.keyPrefix) {
+        setLicense({ keyPrefix: data.keyPrefix });
+        writeHint(data.keyPrefix);
+        // Clean up legacy key after server confirmation
+        try { localStorage.removeItem(OLD_KEY); } catch {}
+      } else {
+        setLicense(null);
+        clearHint();
+      }
+      setIsLoading(false);
+    });
+  }, []);
 
   const activate = useCallback(async (key: string): Promise<ActivateResult> => {
-    const result = await apiActivate(key);
+    try {
+      const response = await fetch('/api/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key }),
+      });
+      const data = await response.json();
 
-    if (result.ok) {
-      const data: LicenseData = {
-        key,
-        instanceId: result.instanceId,
-        activatedAt: result.activatedAt,
-        storeId: lsEnv.storeId,
-        productId: lsEnv.productId,
-      };
-      writeLicense(data);
-      setLicense(data);
+      if (data.ok) {
+        invalidateSession();
+        const prefix = key.slice(0, 8);
+        writeHint(prefix);
+        setIsUnlocked(true);
+        setLicense({ keyPrefix: prefix });
+        return {
+          ok: true,
+          instanceId: data.instanceId ?? '',
+          activatedAt: data.activatedAt ?? new Date().toISOString(),
+        };
+      }
+      return { ok: false, reason: data.reason };
+    } catch {
+      return { ok: false, reason: 'network' };
     }
-
-    return result;
   }, []);
 
   const deactivate = useCallback(() => {
-    clearLicense();
+    fetch('/api/deactivate', { method: 'POST' }).catch(() => {});
+    invalidateSession();
+    clearHint();
+    setIsUnlocked(false);
     setLicense(null);
   }, []);
 
-  const value = useMemo<LicenseContextValue>(() => ({
-    isUnlocked: license !== null,
-    license,
-    activate,
-    deactivate,
-  }), [license, activate, deactivate]);
+  const value = useMemo<LicenseContextValue>(
+    () => ({
+      isUnlocked,
+      isLoading,
+      license,
+      activate,
+      deactivate,
+    }),
+    [isUnlocked, isLoading, license, activate, deactivate],
+  );
 
   return (
     <LicenseContext.Provider value={value}>{children}</LicenseContext.Provider>
@@ -138,6 +196,11 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
+
+/** @internal Reset session cache. Exported for testing only. */
+export function _resetSessionCache(): void {
+  invalidateSession();
+}
 
 export function useLicense(): LicenseContextValue {
   const ctx = useContext(LicenseContext);

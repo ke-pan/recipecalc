@@ -1,177 +1,182 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { LicenseProvider, useLicense } from '../LicenseContext.js';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { renderHook, act, waitFor } from '@testing-library/react';
+import { LicenseProvider, useLicense, _resetSessionCache } from '../LicenseContext.js';
 import type { ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
-// Mock the LemonSqueezy API module
+// Helpers
 // ---------------------------------------------------------------------------
 
-const mockActivate = vi.fn();
+const HINT_KEY = 'recipecalc_license_hint';
+const OLD_KEY = 'recipecalc_license';
 
-vi.mock('../../services/lemonsqueezy.js', () => ({
-  activateLicense: (...args: unknown[]) => mockActivate(...args),
-  _env: {
-    get storeId() { return '12345'; },
-    get productId() { return '67890'; },
-  },
-}));
-
-// ---------------------------------------------------------------------------
-// localStorage mock
-// ---------------------------------------------------------------------------
-
-const STORAGE_KEY = 'recipecalc_license';
-
-let store: Record<string, string> = {};
-
-const mockLocalStorage = {
-  getItem: vi.fn((key: string) => store[key] ?? null),
-  setItem: vi.fn((key: string, value: string) => {
-    store[key] = value;
-  }),
-  removeItem: vi.fn((key: string) => {
-    delete store[key];
-  }),
-};
-
-beforeEach(() => {
-  store = {};
-  mockActivate.mockReset();
-  Object.defineProperty(globalThis, 'localStorage', {
-    value: mockLocalStorage,
-    writable: true,
-    configurable: true,
-  });
-  mockLocalStorage.getItem.mockImplementation((key: string) => store[key] ?? null);
-  mockLocalStorage.setItem.mockImplementation((key: string, value: string) => {
-    store[key] = value;
-  });
-  mockLocalStorage.removeItem.mockImplementation((key: string) => {
-    delete store[key];
-  });
-});
+function wrapper({ children }: { children: ReactNode }) {
+  return <LicenseProvider>{children}</LicenseProvider>;
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function wrapper({ children }: { children: ReactNode }) {
-  return <LicenseProvider>{children}</LicenseProvider>;
-}
-
-function makeLicenseJSON(overrides: Record<string, unknown> = {}): string {
-  return JSON.stringify({
-    key: 'test-key-123',
-    instanceId: 'instance-abc',
-    activatedAt: '2026-03-30T12:00:00.000Z',
-    storeId: '12345',
-    productId: '67890',
-    ...overrides,
-  });
-}
-
-// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('LicenseContext', () => {
-  // ---- Initial state ----
+  // ---- 1. Session check on mount ----
 
-  it('returns isUnlocked=false when localStorage is empty', () => {
-    const { result } = renderHook(() => useLicense(), { wrapper });
-
-    expect(result.current.isUnlocked).toBe(false);
-    expect(result.current.license).toBeNull();
-  });
-
-  it('returns isUnlocked=true when valid license exists in localStorage', () => {
-    store[STORAGE_KEY] = makeLicenseJSON();
+  it('calls /api/session on mount and unlocks when server says unlocked', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ unlocked: true, keyPrefix: 'abc12345' })),
+    );
 
     const { result } = renderHook(() => useLicense(), { wrapper });
 
-    expect(result.current.isUnlocked).toBe(true);
-    expect(result.current.license).not.toBeNull();
-    expect(result.current.license!.key).toBe('test-key-123');
-    expect(result.current.license!.instanceId).toBe('instance-abc');
-    expect(result.current.license!.activatedAt).toBe('2026-03-30T12:00:00.000Z');
-  });
-
-  it('clears corrupt license data and returns isUnlocked=false', () => {
-    store[STORAGE_KEY] = '{not valid json!!!';
-
-    const { result } = renderHook(() => useLicense(), { wrapper });
-
-    expect(result.current.isUnlocked).toBe(false);
-    expect(result.current.license).toBeNull();
-    expect(store[STORAGE_KEY]).toBeUndefined();
-  });
-
-  it('clears license data missing required fields', () => {
-    store[STORAGE_KEY] = JSON.stringify({ key: 'x' }); // missing instanceId, etc.
-
-    const { result } = renderHook(() => useLicense(), { wrapper });
-
-    expect(result.current.isUnlocked).toBe(false);
-    expect(store[STORAGE_KEY]).toBeUndefined();
-  });
-
-  it('clears license data with empty key', () => {
-    store[STORAGE_KEY] = makeLicenseJSON({ key: '' });
-
-    const { result } = renderHook(() => useLicense(), { wrapper });
-
-    expect(result.current.isUnlocked).toBe(false);
-    expect(store[STORAGE_KEY]).toBeUndefined();
-  });
-
-  // ---- activate ----
-
-  it('activate() calls API and writes to localStorage on success', async () => {
-    mockActivate.mockResolvedValueOnce({
-      ok: true,
-      instanceId: 'new-instance',
-      activatedAt: '2026-03-30T14:00:00.000Z',
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
     });
 
+    expect(result.current.isUnlocked).toBe(true);
+    expect(result.current.license).toEqual({ keyPrefix: 'abc12345' });
+    expect(fetch).toHaveBeenCalledWith('/api/session');
+  });
+
+  it('stays locked when server says not unlocked', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ unlocked: false })),
+    );
+
     const { result } = renderHook(() => useLicense(), { wrapper });
 
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
     expect(result.current.isUnlocked).toBe(false);
+    expect(result.current.license).toBeNull();
+  });
+
+  // ---- 2. Hint-based initial state ----
+
+  it('starts as isUnlocked=true when hint exists in localStorage before server responds', async () => {
+    // Set up hint before rendering
+    localStorage.setItem(HINT_KEY, JSON.stringify({ keyPrefix: 'hintpref' }));
+    // Reset cache so a new session fetch is triggered
+    _resetSessionCache();
+
+    // Use a deferred promise so we can control when the server responds
+    let resolveSession!: (v: Response) => void;
+    vi.mocked(fetch).mockImplementationOnce(
+      () => new Promise((resolve) => { resolveSession = resolve; }),
+    );
+
+    const { result } = renderHook(() => useLicense(), { wrapper });
+
+    // Before server responds: hint gives immediate unlocked state
+    expect(result.current.isUnlocked).toBe(true);
+    expect(result.current.isLoading).toBe(true);
+
+    // Now let the server respond
+    await act(async () => {
+      resolveSession(
+        new Response(JSON.stringify({ unlocked: true, keyPrefix: 'hintpref' })),
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.isUnlocked).toBe(true);
+  });
+
+  // ---- 3. Legacy migration ----
+
+  it('migrates old recipecalc_license key to hint format after server confirms', async () => {
+    // Set old format in localStorage
+    localStorage.setItem(OLD_KEY, JSON.stringify({ key: 'ABCDEFGH-rest-of-key' }));
+    _resetSessionCache();
+
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ unlocked: true, keyPrefix: 'ABCDEFGH' })),
+    );
+
+    const { result } = renderHook(() => useLicense(), { wrapper });
+
+    // Old key used as hint: initial state is unlocked
+    expect(result.current.isUnlocked).toBe(true);
+
+    // Old key is NOT deleted until server confirms
+    expect(localStorage.getItem(OLD_KEY)).not.toBeNull();
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // After server confirms: old key removed, hint written
+    expect(localStorage.getItem(OLD_KEY)).toBeNull();
+    expect(localStorage.getItem(HINT_KEY)).not.toBeNull();
+    const hint = JSON.parse(localStorage.getItem(HINT_KEY)!);
+    expect(hint.keyPrefix).toBe('ABCDEFGH');
+  });
+
+  // ---- 4. activate() success ----
+
+  it('activate() POSTs to /api/activate and sets unlocked on success', async () => {
+    const { result } = renderHook(() => useLicense(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Override fetch for the activate call
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          instanceId: 'inst-123',
+          activatedAt: '2026-04-01T10:00:00.000Z',
+        }),
+      ),
+    );
 
     let activateResult: unknown;
     await act(async () => {
-      activateResult = await result.current.activate('new-key');
+      activateResult = await result.current.activate('MYKEY123-full-license-key');
     });
 
-    expect(mockActivate).toHaveBeenCalledWith('new-key');
     expect(activateResult).toEqual({
       ok: true,
-      instanceId: 'new-instance',
-      activatedAt: '2026-03-30T14:00:00.000Z',
+      instanceId: 'inst-123',
+      activatedAt: '2026-04-01T10:00:00.000Z',
     });
     expect(result.current.isUnlocked).toBe(true);
-    expect(result.current.license!.key).toBe('new-key');
-    expect(result.current.license!.instanceId).toBe('new-instance');
+    expect(result.current.license).toEqual({ keyPrefix: 'MYKEY123' });
 
-    // Verify localStorage was written
-    const stored = JSON.parse(store[STORAGE_KEY]);
-    expect(stored.key).toBe('new-key');
-    expect(stored.instanceId).toBe('new-instance');
-    expect(stored.storeId).toBe('12345');
-    expect(stored.productId).toBe('67890');
-  });
-
-  it('activate() does not update state on API failure', async () => {
-    mockActivate.mockResolvedValueOnce({
-      ok: false,
-      reason: 'invalid',
+    // Verify fetch was called correctly
+    expect(fetch).toHaveBeenCalledWith('/api/activate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'MYKEY123-full-license-key' }),
     });
 
+    // Verify localStorage hint was written
+    const hint = JSON.parse(localStorage.getItem(HINT_KEY)!);
+    expect(hint.keyPrefix).toBe('MYKEY123');
+  });
+
+  // ---- 5. activate() failure (all reason types) ----
+
+  it('activate() does not unlock on server failure', async () => {
     const { result } = renderHook(() => useLicense(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: false, reason: 'invalid' })),
+    );
 
     let activateResult: unknown;
     await act(async () => {
@@ -181,74 +186,153 @@ describe('LicenseContext', () => {
     expect(activateResult).toEqual({ ok: false, reason: 'invalid' });
     expect(result.current.isUnlocked).toBe(false);
     expect(result.current.license).toBeNull();
-    expect(store[STORAGE_KEY]).toBeUndefined();
   });
 
-  it('activate() returns all error types from API', async () => {
-    const reasons = ['invalid', 'wrong_product', 'limit_reached', 'network'] as const;
+  it.each([
+    'invalid',
+    'wrong_product',
+    'limit_reached',
+    'network',
+  ] as const)('activate() returns reason=%s from server', async (reason) => {
+    const { result } = renderHook(() => useLicense(), { wrapper });
 
-    for (const reason of reasons) {
-      mockActivate.mockResolvedValueOnce({ ok: false, reason });
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
 
-      const { result } = renderHook(() => useLicense(), { wrapper });
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: false, reason })),
+    );
 
-      let activateResult: unknown;
-      await act(async () => {
-        activateResult = await result.current.activate('key');
-      });
+    let activateResult: unknown;
+    await act(async () => {
+      activateResult = await result.current.activate('some-key');
+    });
 
-      expect(activateResult).toEqual({ ok: false, reason });
-    }
+    expect(activateResult).toEqual({ ok: false, reason });
+    expect(result.current.isUnlocked).toBe(false);
   });
 
-  // ---- deactivate ----
+  // ---- 6. activate() network error ----
 
-  it('deactivate() clears localStorage and resets state', () => {
-    store[STORAGE_KEY] = makeLicenseJSON();
+  it('activate() returns reason=network when fetch throws', async () => {
+    const { result } = renderHook(() => useLicense(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    vi.mocked(fetch).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    let activateResult: unknown;
+    await act(async () => {
+      activateResult = await result.current.activate('any-key');
+    });
+
+    expect(activateResult).toEqual({ ok: false, reason: 'network' });
+    expect(result.current.isUnlocked).toBe(false);
+  });
+
+  // ---- 7. deactivate() ----
+
+  it('deactivate() calls /api/deactivate, clears state and hint', async () => {
+    // Start with an unlocked state
+    localStorage.setItem(HINT_KEY, JSON.stringify({ keyPrefix: 'testpref' }));
+    _resetSessionCache();
+
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ unlocked: true, keyPrefix: 'testpref' })),
+    );
 
     const { result } = renderHook(() => useLicense(), { wrapper });
 
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
     expect(result.current.isUnlocked).toBe(true);
 
+    // Now deactivate
     act(() => {
       result.current.deactivate();
     });
 
     expect(result.current.isUnlocked).toBe(false);
     expect(result.current.license).toBeNull();
-    expect(store[STORAGE_KEY]).toBeUndefined();
+    expect(localStorage.getItem(HINT_KEY)).toBeNull();
+
+    // Verify /api/deactivate was called
+    expect(fetch).toHaveBeenCalledWith('/api/deactivate', { method: 'POST' });
   });
 
-  // ---- Persistence roundtrip ----
+  // ---- 8. Server overrides hint ----
 
-  it('activate → remount → license persists (page refresh simulation)', async () => {
-    mockActivate.mockResolvedValueOnce({
-      ok: true,
-      instanceId: 'persist-instance',
-      activatedAt: '2026-03-30T15:00:00.000Z',
+  it('clears hint and locks when hint says unlocked but server says not', async () => {
+    // Hint says we're unlocked
+    localStorage.setItem(HINT_KEY, JSON.stringify({ keyPrefix: 'stale' }));
+    _resetSessionCache();
+
+    // Server disagrees
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ unlocked: false })),
+    );
+
+    const { result } = renderHook(() => useLicense(), { wrapper });
+
+    // Initially unlocked from hint
+    expect(result.current.isUnlocked).toBe(true);
+
+    // After server responds, state should flip
+    await waitFor(() => {
+      expect(result.current.isUnlocked).toBe(false);
     });
 
-    // First mount: activate
-    const { result: r1 } = renderHook(() => useLicense(), { wrapper });
-
-    await act(async () => {
-      await r1.current.activate('persist-key');
-    });
-
-    expect(r1.current.isUnlocked).toBe(true);
-
-    // Second mount: should read from localStorage
-    const { result: r2 } = renderHook(() => useLicense(), { wrapper });
-
-    expect(r2.current.isUnlocked).toBe(true);
-    expect(r2.current.license!.key).toBe('persist-key');
-    expect(r2.current.license!.instanceId).toBe('persist-instance');
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.license).toBeNull();
+    // Hint should be cleared
+    expect(localStorage.getItem(HINT_KEY)).toBeNull();
   });
 
-  // ---- Error boundary ----
+  // ---- 9. Session cache deduplication ----
+
+  it('multiple providers on same page only trigger one /api/session fetch', async () => {
+    // The session cache from the setup.ts beforeEach means fetchSession()
+    // already resolved for the first provider. Reset it so we control the flow.
+    _resetSessionCache();
+
+    const sessionResponse = new Response(
+      JSON.stringify({ unlocked: false }),
+    );
+    vi.mocked(fetch).mockResolvedValueOnce(sessionResponse);
+
+    // Render two separate providers (simulating multiple islands on the page)
+    const wrapper1 = ({ children }: { children: ReactNode }) => (
+      <LicenseProvider>{children}</LicenseProvider>
+    );
+    const wrapper2 = ({ children }: { children: ReactNode }) => (
+      <LicenseProvider>{children}</LicenseProvider>
+    );
+
+    const { result: r1 } = renderHook(() => useLicense(), { wrapper: wrapper1 });
+    const { result: r2 } = renderHook(() => useLicense(), { wrapper: wrapper2 });
+
+    await waitFor(() => {
+      expect(r1.current.isLoading).toBe(false);
+    });
+    await waitFor(() => {
+      expect(r2.current.isLoading).toBe(false);
+    });
+
+    // fetch should only have been called once for /api/session
+    const sessionCalls = vi.mocked(fetch).mock.calls.filter(
+      ([url]) => url === '/api/session',
+    );
+    expect(sessionCalls).toHaveLength(1);
+  });
+
+  // ---- 10. useLicense outside provider ----
 
   it('throws when useLicense is used outside LicenseProvider', () => {
-    // Suppress console.error from the expected React error
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     expect(() => {
@@ -256,29 +340,5 @@ describe('LicenseContext', () => {
     }).toThrow('useLicense must be used within a LicenseProvider');
 
     consoleError.mockRestore();
-  });
-
-  // ---- Graceful degradation ----
-
-  it('handles localStorage being unavailable during activate', async () => {
-    mockLocalStorage.setItem.mockImplementation(() => {
-      throw new DOMException('QuotaExceededError');
-    });
-
-    mockActivate.mockResolvedValueOnce({
-      ok: true,
-      instanceId: 'no-storage-instance',
-      activatedAt: '2026-03-30T16:00:00.000Z',
-    });
-
-    const { result } = renderHook(() => useLicense(), { wrapper });
-
-    // activate should not throw — state updates even if localStorage fails
-    await act(async () => {
-      await result.current.activate('key');
-    });
-
-    // In-memory state should still be updated
-    expect(result.current.isUnlocked).toBe(true);
   });
 });

@@ -1,6 +1,5 @@
 import { useState, useCallback, type FormEvent } from 'react';
-import { LicenseProvider, useLicense } from '../../contexts/LicenseContext.js';
-import type { ActivateResult } from '../../services/lemonsqueezy.js';
+import { LicenseProvider, useLicense, type ActivateResult } from '../../contexts/LicenseContext.js';
 import { trackEvent, EVENTS } from '../../lib/analytics';
 import './activate.css';
 
@@ -95,9 +94,9 @@ function ActivateForm() {
         <p className="activate__activated-subtitle">
           Your license is active. You have full access.
         </p>
-        {license?.key && (
+        {license?.keyPrefix && (
           <span className="activate__activated-key">
-            {license.key.slice(0, 8)}...
+            {license.keyPrefix}...
           </span>
         )}
         <a href="/calculator" className="activate__btn activate__btn--success">
