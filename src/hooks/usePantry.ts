@@ -65,6 +65,7 @@ export interface UsePantryReturn {
   remove: (id: string) => void;
   findByName: (name: string) => PantryItem | undefined;
   getReferencingRecipeCount: (id: string) => number;
+  importItems: (items: PantryItem[]) => { added: number; skipped: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -166,5 +167,37 @@ export function usePantry(): UsePantryReturn {
     ).length;
   }, []);
 
-  return { pantry, add, update, remove, findByName, getReferencingRecipeCount };
+  const importItems = useCallback(
+    (items: PantryItem[]): { added: number; skipped: number } => {
+      const validItems = items.filter(isValidPantryItem);
+      let added = 0;
+      let skipped = 0;
+
+      setPantry((prev) => {
+        const existingIds = new Set(prev.map((p) => p.id));
+        const existingNames = new Set(prev.map((p) => p.name.toLowerCase()));
+        const newEntries: PantryItem[] = [];
+
+        for (const item of validItems) {
+          if (existingIds.has(item.id) || existingNames.has(item.name.toLowerCase())) {
+            skipped++;
+          } else {
+            newEntries.push(item);
+            existingIds.add(item.id);
+            existingNames.add(item.name.toLowerCase());
+            added++;
+          }
+        }
+
+        const next = [...prev, ...newEntries];
+        writePantry(next);
+        return next;
+      });
+
+      return { added, skipped };
+    },
+    [],
+  );
+
+  return { pantry, add, update, remove, findByName, getReferencingRecipeCount, importItems };
 }

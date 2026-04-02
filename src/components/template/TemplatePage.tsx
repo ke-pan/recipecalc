@@ -392,7 +392,7 @@ function RecipeRow({ computed, isExpanded, onToggle, onDelete, onLinkIngredient,
 function TemplateContent() {
   const { isUnlocked } = useLicense();
   const { recipes, save, remove, update, exportAll, importRecipes } = useRecipes();
-  const { pantry, add: addPantryItem } = usePantry();
+  const { pantry, add: addPantryItem, importItems: importPantryItems } = usePantry();
   const { defaults } = useDefaults();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -477,7 +477,7 @@ function TemplateContent() {
   }, [recipes, update]);
 
   const handleExport = useCallback(() => {
-    const json = exportAll();
+    const json = exportAll(pantry);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -485,7 +485,7 @@ function TemplateContent() {
     a.download = 'recipecalc-recipes.json';
     a.click();
     URL.revokeObjectURL(url);
-  }, [exportAll]);
+  }, [exportAll, pantry]);
 
   const handleImport = useCallback(() => {
     const input = document.createElement('input');
@@ -497,12 +497,12 @@ function TemplateContent() {
       const reader = new FileReader();
       reader.onload = () => {
         const json = reader.result as string;
-        importRecipes(json);
+        importRecipes(json, importPantryItems);
       };
       reader.readAsText(file);
     };
     input.click();
-  }, [importRecipes]);
+  }, [importRecipes, importPantryItems]);
 
   const handleQuickAddSave = useCallback(
     (recipe: Recipe, targetCostRatio: number) => {

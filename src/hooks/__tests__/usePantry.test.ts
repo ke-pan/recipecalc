@@ -586,6 +586,124 @@ describe('usePantry', () => {
     });
   });
 
+  // ---- importItems() ----
+
+  describe('importItems()', () => {
+    it('imports valid pantry items', () => {
+      const { result } = renderHook(() => usePantry());
+
+      const items = [
+        makePantryItem({ id: 'import-1', name: 'Flour' }),
+        makePantryItem({ id: 'import-2', name: 'Sugar' }),
+      ];
+
+      let importResult: { added: number; skipped: number };
+      act(() => {
+        importResult = result.current.importItems(items);
+      });
+
+      expect(importResult!.added).toBe(2);
+      expect(importResult!.skipped).toBe(0);
+      expect(result.current.pantry).toHaveLength(2);
+    });
+
+    it('deduplicates by id', () => {
+      store[PANTRY_KEY] = JSON.stringify([
+        makePantryItem({ id: 'existing-1', name: 'Flour' }),
+      ]);
+
+      const { result } = renderHook(() => usePantry());
+
+      let importResult: { added: number; skipped: number };
+      act(() => {
+        importResult = result.current.importItems([
+          makePantryItem({ id: 'existing-1', name: 'Flour Dup' }),
+          makePantryItem({ id: 'new-1', name: 'Sugar' }),
+        ]);
+      });
+
+      expect(importResult!.added).toBe(1);
+      expect(importResult!.skipped).toBe(1);
+      expect(result.current.pantry).toHaveLength(2);
+    });
+
+    it('deduplicates by name (case-insensitive)', () => {
+      store[PANTRY_KEY] = JSON.stringify([
+        makePantryItem({ id: 'existing-1', name: 'Flour' }),
+      ]);
+
+      const { result } = renderHook(() => usePantry());
+
+      let importResult: { added: number; skipped: number };
+      act(() => {
+        importResult = result.current.importItems([
+          makePantryItem({ id: 'different-id', name: 'flour' }),
+        ]);
+      });
+
+      expect(importResult!.added).toBe(0);
+      expect(importResult!.skipped).toBe(1);
+      expect(result.current.pantry).toHaveLength(1);
+    });
+
+    it('filters out invalid items', () => {
+      const { result } = renderHook(() => usePantry());
+
+      let importResult: { added: number; skipped: number };
+      act(() => {
+        importResult = result.current.importItems([
+          makePantryItem({ id: 'valid-1', name: 'Flour' }),
+          { id: 'bad', name: 123 } as unknown as PantryItem,
+        ]);
+      });
+
+      expect(importResult!.added).toBe(1);
+      expect(result.current.pantry).toHaveLength(1);
+    });
+
+    it('writes imported items to localStorage', () => {
+      const { result } = renderHook(() => usePantry());
+
+      act(() => {
+        result.current.importItems([
+          makePantryItem({ id: 'import-1', name: 'Flour' }),
+        ]);
+      });
+
+      const stored = JSON.parse(store[PANTRY_KEY]);
+      expect(stored).toHaveLength(1);
+      expect(stored[0].name).toBe('Flour');
+    });
+
+    it('handles empty import array', () => {
+      const { result } = renderHook(() => usePantry());
+
+      let importResult: { added: number; skipped: number };
+      act(() => {
+        importResult = result.current.importItems([]);
+      });
+
+      expect(importResult!.added).toBe(0);
+      expect(importResult!.skipped).toBe(0);
+    });
+
+    it('deduplicates within the import batch itself', () => {
+      const { result } = renderHook(() => usePantry());
+
+      let importResult: { added: number; skipped: number };
+      act(() => {
+        importResult = result.current.importItems([
+          makePantryItem({ id: 'import-1', name: 'Flour' }),
+          makePantryItem({ id: 'import-1', name: 'Flour Again' }),
+        ]);
+      });
+
+      expect(importResult!.added).toBe(1);
+      expect(importResult!.skipped).toBe(1);
+      expect(result.current.pantry).toHaveLength(1);
+    });
+  });
+
   // ---- Graceful degradation ----
 
   describe('graceful degradation', () => {

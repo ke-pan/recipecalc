@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { Recipe } from '../lib/calc/types.js';
+import type { PantryItem } from '../types/pantry.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -14,13 +15,29 @@ export interface SavedRecipe {
   targetCostRatio: number;
 }
 
+/** v2 export format — includes pantry alongside recipes. */
+export interface ExportDataV2 {
+  version: 2;
+  exportedAt: string;
+  pantry: PantryItem[];
+  recipes: SavedRecipe[];
+}
+
+/** Import result with recipe and pantry counts. */
+export interface ImportResult {
+  added: number;
+  skipped: number;
+  pantryAdded: number;
+  pantrySkipped: number;
+}
+
 export interface UseRecipesReturn {
   recipes: SavedRecipe[];
   save: (recipe: Recipe, targetCostRatio: number) => SavedRecipe;
   update: (id: string, recipe: Recipe, targetCostRatio: number) => void;
   remove: (id: string) => void;
-  exportAll: () => string;
-  importRecipes: (json: string) => { added: number; skipped: number };
+  exportAll: (pantry: PantryItem[]) => string;
+  importRecipes: (json: string, importPantryItems?: (items: PantryItem[]) => { added: number; skipped: number }) => ImportResult;
 }
 
 // ---------------------------------------------------------------------------
@@ -127,28 +144,68 @@ export function useRecipes(): UseRecipesReturn {
     });
   }, []);
 
-  const exportAll = useCallback((): string => {
+  const exportAll = useCallback((pantry: PantryItem[]): string => {
     // Read fresh from localStorage to ensure we export the latest data.
-    // Explicitly exclude any license key data — only recipe data is exported.
+    // Explicitly exclude any license key data — only recipe + pantry data is exported.
     const current = readRecipes();
-    return JSON.stringify(current, null, 2);
+    const data: ExportDataV2 = {
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      pantry,
+      recipes: current,
+    };
+    return JSON.stringify(data, null, 2);
   }, []);
 
-  const importRecipes = useCallback((json: string): { added: number; skipped: number } => {
+  const importRecipes = useCallback((
+    json: string,
+    importPantryItems?: (items: PantryItem[]) => { added: number; skipped: number },
+  ): ImportResult => {
     let incoming: unknown;
     try {
       incoming = JSON.parse(json);
     } catch {
-      return { added: 0, skipped: 0 };
+      return { added: 0, skipped: 0, pantryAdded: 0, pantrySkipped: 0 };
     }
 
-    if (!Array.isArray(incoming)) {
-      return { added: 0, skipped: 0 };
+    // Detect v1 (array of recipes) vs v2 (object with version: 2)
+    let recipesData: unknown[];
+    let pantryData: PantryItem[] = [];
+
+    if (Array.isArray(incoming)) {
+      // v1 format: plain array of SavedRecipe[]
+      recipesData = incoming;
+    } else if (
+      incoming &&
+      typeof incoming === 'object' &&
+      (incoming as Record<string, unknown>).version === 2
+    ) {
+      // v2 format: { version: 2, exportedAt, pantry, recipes }
+      const v2 = incoming as Record<string, unknown>;
+      recipesData = Array.isArray(v2.recipes) ? v2.recipes : [];
+      pantryData = Array.isArray(v2.pantry) ? v2.pantry : [];
+    } else {
+      return { added: 0, skipped: 0, pantryAdded: 0, pantrySkipped: 0 };
     }
 
-    const validEntries = incoming.filter(isValidSavedRecipe);
+    // Import pantry items if a handler is provided and we have pantry data
+    let pantryAdded = 0;
+    let pantrySkipped = 0;
+    if (importPantryItems && pantryData.length > 0) {
+      const pantryResult = importPantryItems(pantryData);
+      pantryAdded = pantryResult.added;
+      pantrySkipped = pantryResult.skipped;
+    }
+
+    // Import recipes
+    const validEntries = recipesData.filter(isValidSavedRecipe);
     if (validEntries.length === 0) {
-      return { added: 0, skipped: validEntries.length === 0 ? incoming.length : 0 };
+      return {
+        added: 0,
+        skipped: validEntries.length === 0 ? recipesData.length : 0,
+        pantryAdded,
+        pantrySkipped,
+      };
     }
 
     let added = 0;
@@ -172,7 +229,7 @@ export function useRecipes(): UseRecipesReturn {
       return next;
     });
 
-    return { added, skipped };
+    return { added, skipped, pantryAdded, pantrySkipped };
   }, []);
 
   return { recipes, save, update, remove, exportAll, importRecipes };
