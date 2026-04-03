@@ -25,8 +25,9 @@ PUBLIC_FORCE_UNLOCK = "true"
 # SESSION_SECRET is a secret — set via:
 #   wrangler secret put SESSION_SECRET
 
+[[kv_namespaces]]
+binding = "SESSION"
+id = "8de1f763cd024cdd944b462618fc7da5"
+
 [observability]
 enabled = true
-
-[assets]
-directory = "dist"
