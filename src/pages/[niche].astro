@@ -1,0 +1,236 @@
+---
+export const prerender = true;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { NICHE_LANDINGS, type NicheLanding } from '../data/niche-landings';
+import '../components/hero/hero.css';
+import '../styles/landing.css';
+
+export function getStaticPaths() {
+  return NICHE_LANDINGS.map((niche) => ({
+    params: { niche: niche.slug },
+    props: { niche },
+  }));
+}
+
+interface Props {
+  niche: NicheLanding;
+}
+
+const { niche } = Astro.props;
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: niche.faqs.map((faq) => ({
+    '@type': 'Question',
+    name: faq.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: faq.answer,
+    },
+  })),
+};
+
+const relatedNiches = NICHE_LANDINGS.filter((n) => niche.related.includes(n.slug));
+---
+
+<BaseLayout title={niche.title} description={niche.description}>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+  </Fragment>
+
+  <!-- 1. Hero (text-only, no photo, no carousel) -->
+  <section class="hero hero--niche">
+    <div class="hero__content hero__content--centered">
+      <p class="hero__brand">RecipePricer</p>
+      <h1 class="hero__title">{niche.heroHeadline}</h1>
+      <p class="hero__desc hero__desc--niche">{niche.heroSubheadline}</p>
+      <a href="/calculator" class="hero__cta" data-umami-event={`niche_cta_hero_${niche.slug}`}>{niche.heroCta}</a>
+      <div class="hero__badges hero__badges--centered">
+        {niche.heroBadges.map((badge) => (
+          <span class="hero__badge">
+            <span class="hero__badge-icon">&#x2713;</span>
+            {badge}
+          </span>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Cost Comparison (reuses .problem__* classes) -->
+  <section class="section section--surface">
+    <div class="section__inner problem">
+      <p class="section-label">The real cost</p>
+
+      <h2 class="problem__hook">
+        What {niche.costComparison.productName}<br />
+        <em>actually</em> costs to make
+      </h2>
+      <p class="problem__sub">
+        Most people only count ingredients. Here's the full picture.
+      </p>
+
+      <div class="problem__compare">
+        <div class="problem__card">
+          <p class="problem__card-label">What you think it costs</p>
+          {niche.costComparison.ingredientOnly.items.map((item) => (
+            <div class="problem__line">
+              <span>{item.label}</span>
+              <span class="problem__line-amount">{item.amount}</span>
+            </div>
+          ))}
+          <div class="problem__total">
+            <span>Total</span>
+            <span class="problem__total-amount">{niche.costComparison.ingredientOnly.total}</span>
+          </div>
+        </div>
+
+        <div class="problem__arrow">&#8594;</div>
+
+        <div class="problem__card problem__card--real">
+          <p class="problem__card-label">What it actually costs</p>
+          <div class="problem__line">
+            <span>Ingredients</span>
+            <span class="problem__line-amount">{niche.costComparison.trueCost.ingredientTotal}</span>
+          </div>
+          <div class="problem__line">
+            <span>Your labor ({niche.costComparison.trueCost.laborHours} hrs)</span>
+            <span class="problem__line-amount">{niche.costComparison.trueCost.laborCost}</span>
+          </div>
+          <div class="problem__line">
+            <span>Packaging</span>
+            <span class="problem__line-amount">{niche.costComparison.trueCost.packaging}</span>
+          </div>
+          <div class="problem__line">
+            <span>Overhead</span>
+            <span class="problem__line-amount">{niche.costComparison.trueCost.overhead}</span>
+          </div>
+          <div class="problem__line">
+            <span>Platform fees</span>
+            <span class="problem__line-amount">{niche.costComparison.trueCost.platformFees}</span>
+          </div>
+          <div class="problem__total">
+            <span>True cost</span>
+            <span class="problem__total-amount">{niche.costComparison.trueCost.total}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="problem__gap-wrapper">
+        <div class="problem__gap">
+          <span class="problem__gap-amount">{niche.costComparison.hiddenCost}</span>
+          <span class="problem__gap-text">{niche.costComparison.hiddenCostLabel}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Common Ingredients -->
+  <section class="section">
+    <div class="section__inner">
+      <p class="section-label" style="text-align:center">Know your ingredients</p>
+      <h2 class="section-heading" style="text-align:center;margin-bottom:40px">{niche.ingredientsSectionTitle}</h2>
+      <div class="niche-ingredients__grid">
+        {niche.ingredients.map((ing) => (
+          <div class="niche-ingredient-card">
+            <div class="niche-ingredient-card__header">
+              <span class="niche-ingredient-card__name">{ing.name}</span>
+              <span class="niche-ingredient-card__cost">{ing.typicalCost}</span>
+            </div>
+            <p class="niche-ingredient-card__driver">{ing.costDriver}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Industry Benchmarks -->
+  <section class="section section--surface">
+    <div class="section__inner">
+      <p class="section-label" style="text-align:center">Industry benchmarks</p>
+      <h2 class="section-heading" style="text-align:center;margin-bottom:40px">Numbers to know</h2>
+      <div class="benchmarks__grid">
+        {niche.benchmarks.map((b) => (
+          <div class="benchmark-card">
+            <p class="benchmark-card__value">{b.value}</p>
+            <p class="benchmark-card__metric">{b.metric}</p>
+            <p class="benchmark-card__context">{b.context}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Tips -->
+  <section class="section">
+    <div class="section__inner">
+      <p class="section-label" style="text-align:center">Pricing tips</p>
+      <h2 class="section-heading" style="text-align:center;margin-bottom:40px">Get your pricing right</h2>
+      <div class="tips__list">
+        {niche.tips.map((tip) => (
+          <div class="tip-card">
+            <h3 class="tip-card__title">{tip.title}</h3>
+            <p class="tip-card__body">{tip.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. FAQ -->
+  <section class="section section--surface">
+    <div class="section__inner">
+      <p class="section-label" style="text-align:center">FAQ</p>
+      <h2 class="section-heading" style="text-align:center;margin-bottom:36px">Common questions</h2>
+      <div class="faq__list">
+        {niche.faqs.map((faq) => (
+          <details class="faq-item">
+            <summary data-faq={faq.slug}>{faq.question}</summary>
+            <div class="faq-item__answer">{faq.answer}</div>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Final CTA -->
+  <section class="section section--reveal final-cta">
+    <div class="section__inner">
+      <h2 class="final-cta__heading" set:html={niche.ctaHeadline.replace('\n', '<br />')} />
+      <p class="final-cta__sub">{niche.ctaSubtext}</p>
+      <a href="/calculator" class="btn" data-umami-event={`niche_cta_bottom_${niche.slug}`}>
+        {niche.heroCta}
+      </a>
+    </div>
+  </section>
+
+  <!-- 8. Related calculators (cross-linking) -->
+  {relatedNiches.length > 0 && (
+    <section class="section">
+      <div class="section__inner" style="text-align:center">
+        <p class="section-label">Related calculators</p>
+        <div class="related-links">
+          {relatedNiches.map((r) => (
+            <a href={`/${r.slug}`} class="related-links__item">{r.heroHeadline}</a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <script>
+    document.querySelectorAll('.faq-item').forEach((el) => {
+      el.addEventListener('toggle', () => {
+        if ((el as HTMLDetailsElement).open) {
+          const q = el.querySelector('summary')?.getAttribute('data-faq');
+          window.umami?.track('faq_open', { question: q ?? '' });
+        }
+      });
+    });
+  </script>
+
+  <footer class="landing-footer">
+    <p>&copy; 2026 RecipePricer. Know your true cost. Price with confidence.</p>
+  </footer>
+</BaseLayout>
