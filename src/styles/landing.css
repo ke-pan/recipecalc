@@ -436,8 +436,39 @@
 }
 
 /* ==========================================================================
-   FOOTER
+   CONTENT PAGES — About, Privacy, etc.
+   Shared layout for text-heavy pages with breadcrumb + prose
    ========================================================================== */
+
+.content-page {
+  max-width: var(--max-content-width);
+  margin: 0 auto;
+  padding: var(--space-2xl) var(--space-lg) var(--space-xl);
+}
+
+.content-page__breadcrumb {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-lg);
+}
+
+.content-page__breadcrumb a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.content-page__breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.content-page__header {
+  margin-bottom: var(--space-xl);
+}
+
+.content-page__title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+}
 
 /* ==========================================================================
    NICHE LANDING PAGES — Hero variant, ingredients, benchmarks, tips, related

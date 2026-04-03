@@ -233,14 +233,7 @@ const schemaGraph = {
   )}
 
   <script>
-    document.querySelectorAll('.faq-item').forEach((el) => {
-      el.addEventListener('toggle', () => {
-        if ((el as HTMLDetailsElement).open) {
-          const q = el.querySelector('summary')?.getAttribute('data-faq');
-          window.umami?.track('faq_open', { question: q ?? '' });
-        }
-      });
-    });
+    import '../scripts/faq-tracking';
   </script>
 
   <footer class="landing-footer">

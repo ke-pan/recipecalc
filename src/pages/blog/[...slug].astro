@@ -3,6 +3,7 @@ export const prerender = true;
 
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { categoryLabels } from '../../data/blog-categories';
 import '../../styles/landing.css';
 import '../../styles/prose.css';
 
@@ -18,6 +19,7 @@ const { post } = Astro.props;
 const { Content } = await render(post);
 
 const { title, description, pubDate, category, tags } = post.data;
+const categoryLabel = categoryLabels[category] || category;
 const formattedDate = pubDate.toLocaleDateString('en-US', {
   year: 'numeric',
   month: 'long',
@@ -26,31 +28,15 @@ const formattedDate = pubDate.toLocaleDateString('en-US', {
 
 const pageTitle = `${title} | RecipePricer Blog`;
 
-const postUrl = new URL(`/blog/${post.id}`, Astro.site).href;
-const ogImageUrl = new URL('/hero-baking.jpg', Astro.site).href;
+const siteUrl = Astro.site!.href;
+const postUrl = new URL(`/blog/${post.id}`, siteUrl).href;
+const ogImageUrl = new URL('/hero-baking.jpg', siteUrl).href;
+const logoUrl = new URL('/logo.svg', siteUrl).href;
 
-const blogPostingSchema = {
-  '@type': 'BlogPosting',
-  headline: title,
-  description,
-  image: ogImageUrl,
-  datePublished: pubDate.toISOString(),
-  dateModified: pubDate.toISOString(),
-  mainEntityOfPage: { '@type': 'WebPage', '@id': postUrl },
-  author: {
-    '@type': 'Organization',
-    name: 'RecipePricer',
-    url: 'https://recipepricer.com',
-  },
-  publisher: {
-    '@type': 'Organization',
-    name: 'RecipePricer',
-    url: 'https://recipepricer.com',
-    logo: {
-      '@type': 'ImageObject',
-      url: new URL('/logo.svg', Astro.site).href,
-    },
-  },
+const org = {
+  '@type': 'Organization' as const,
+  name: 'RecipePricer',
+  url: siteUrl,
 };
 
 const allPosts = await getCollection('blog');
@@ -59,21 +45,25 @@ const relatedPosts = allPosts
   .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
   .slice(0, 2);
 
-const categoryLabels: Record<string, string> = {
-  pricing: 'Pricing',
-  guides: 'Guides',
-  business: 'Business',
-};
-
 const schemaGraph = {
   '@context': 'https://schema.org',
   '@graph': [
-    blogPostingSchema,
+    {
+      '@type': 'BlogPosting',
+      headline: title,
+      description,
+      image: ogImageUrl,
+      datePublished: pubDate.toISOString(),
+      dateModified: pubDate.toISOString(),
+      mainEntityOfPage: { '@type': 'WebPage', '@id': postUrl },
+      author: org,
+      publisher: { ...org, logo: { '@type': 'ImageObject', url: logoUrl } },
+    },
     {
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://recipepricer.com/' },
-        { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://recipepricer.com/blog/' },
+        { '@type': 'ListItem', position: 1, name: 'Home', item: siteUrl },
+        { '@type': 'ListItem', position: 2, name: 'Blog', item: `${siteUrl}blog/` },
         { '@type': 'ListItem', position: 3, name: title },
       ],
     },
@@ -92,12 +82,12 @@ const schemaGraph = {
     <nav class="blog-post__breadcrumb" aria-label="Breadcrumb">
       <a href="/blog">Blog</a>
       <span class="blog-post__breadcrumb-sep">/</span>
-      <span>{categoryLabels[category] || category}</span>
+      <span>{categoryLabel}</span>
     </nav>
 
     <!-- Header -->
     <header class="blog-post__header">
-      <span class="blog-post__category">{categoryLabels[category] || category}</span>
+      <span class="blog-post__category">{categoryLabel}</span>
       <h1 class="blog-post__title">{title}</h1>
       <p class="blog-post__meta">
         <time datetime={pubDate.toISOString()}>{formattedDate}</time>

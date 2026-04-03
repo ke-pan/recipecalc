@@ -3,6 +3,7 @@ export const prerender = true;
 
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { categoryLabels } from '../../data/blog-categories';
 import '../../styles/landing.css';
 import '../../styles/prose.css';
 
@@ -13,12 +14,6 @@ const description =
 const posts = (await getCollection('blog')).sort(
   (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
 );
-
-const categoryLabels: Record<string, string> = {
-  pricing: 'Pricing',
-  guides: 'Guides',
-  business: 'Business',
-};
 ---
 
 <BaseLayout title={title} description={description}>

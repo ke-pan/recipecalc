@@ -10,13 +10,13 @@ const description =
 ---
 
 <BaseLayout title={title} description={description}>
-  <article class="about-page">
-    <nav class="about-page__breadcrumb" aria-label="Breadcrumb">
+  <article class="content-page">
+    <nav class="content-page__breadcrumb" aria-label="Breadcrumb">
       <a href="/">Home</a>
     </nav>
-    <header class="about-page__header">
+    <header class="content-page__header">
       <p class="section-label">About</p>
-      <h1 class="about-page__title">Why RecipePricer exists</h1>
+      <h1 class="content-page__title">Why RecipePricer exists</h1>
     </header>
 
     <div class="prose">
@@ -65,36 +65,6 @@ const description =
 </BaseLayout>
 
 <style>
-  .about-page {
-    max-width: var(--max-content-width);
-    margin: 0 auto;
-    padding: var(--space-2xl) var(--space-lg) var(--space-xl);
-  }
-
-  .about-page__breadcrumb {
-    font-size: var(--text-sm);
-    color: var(--text-muted);
-    margin-bottom: var(--space-lg);
-  }
-
-  .about-page__breadcrumb a {
-    color: var(--accent);
-    text-decoration: none;
-  }
-
-  .about-page__breadcrumb a:hover {
-    text-decoration: underline;
-  }
-
-  .about-page__header {
-    margin-bottom: var(--space-xl);
-  }
-
-  .about-page__title {
-    font-family: var(--font-display);
-    font-size: var(--text-2xl);
-  }
-
   .about-page__cta {
     margin-top: var(--space-xl);
     padding-top: var(--space-xl);
