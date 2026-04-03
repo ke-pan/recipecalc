@@ -1,0 +1,121 @@
+---
+export const prerender = true;
+
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import '../../styles/landing.css';
+import '../../styles/prose.css';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+
+const { title, description, pubDate, category, tags } = post.data;
+const formattedDate = pubDate.toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+
+const pageTitle = `${title} | RecipePricer Blog`;
+
+const blogPostingSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: title,
+  description,
+  datePublished: pubDate.toISOString(),
+  author: {
+    '@type': 'Organization',
+    name: 'RecipePricer',
+    url: 'https://recipepricer.com',
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: 'RecipePricer',
+    url: 'https://recipepricer.com',
+  },
+};
+
+const allPosts = await getCollection('blog');
+const relatedPosts = allPosts
+  .filter((p) => p.id !== post.id)
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 2);
+
+const categoryLabels: Record<string, string> = {
+  pricing: 'Pricing',
+  guides: 'Guides',
+  business: 'Business',
+};
+---
+
+<BaseLayout title={pageTitle} description={description}>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(blogPostingSchema)} />
+  </Fragment>
+
+  <article class="blog-post">
+    <!-- Breadcrumb -->
+    <nav class="blog-post__breadcrumb" aria-label="Breadcrumb">
+      <a href="/blog">Blog</a>
+      <span class="blog-post__breadcrumb-sep">/</span>
+      <span>{categoryLabels[category] || category}</span>
+    </nav>
+
+    <!-- Header -->
+    <header class="blog-post__header">
+      <span class="blog-post__category">{categoryLabels[category] || category}</span>
+      <h1 class="blog-post__title">{title}</h1>
+      <p class="blog-post__meta">
+        <time datetime={pubDate.toISOString()}>{formattedDate}</time>
+        {tags.length > 0 && (
+          <span class="blog-post__tags">
+            {tags.map((tag) => (
+              <span class="blog-post__tag">{tag}</span>
+            ))}
+          </span>
+        )}
+      </p>
+    </header>
+
+    <!-- Content -->
+    <div class="prose">
+      <Content />
+    </div>
+
+    <!-- CTA -->
+    <div class="blog-post__cta">
+      <h2 class="blog-post__cta-heading">Ready to see your true cost?</h2>
+      <p class="blog-post__cta-sub">Calculate your recipe cost in 3 minutes. Free, no signup required.</p>
+      <a href="/calculator" class="btn" data-umami-event="blog_cta_click">Calculate your true cost</a>
+    </div>
+
+    <!-- Related posts -->
+    {relatedPosts.length > 0 && (
+      <div class="blog-post__related">
+        <h3 class="blog-post__related-heading">More from the blog</h3>
+        <div class="blog-post__related-grid">
+          {relatedPosts.map((p) => (
+            <a href={`/blog/${p.id}`} class="blog-card blog-card--compact">
+              <span class="blog-card__category">{categoryLabels[p.data.category] || p.data.category}</span>
+              <h4 class="blog-card__title">{p.data.title}</h4>
+              <p class="blog-card__desc">{p.data.description}</p>
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+  </article>
+
+  <footer class="landing-footer">
+    <p>&copy; 2026 RecipePricer. Know your true cost. Price with confidence.</p>
+  </footer>
+</BaseLayout>

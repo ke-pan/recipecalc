@@ -1,0 +1,59 @@
+---
+export const prerender = true;
+
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import '../../styles/landing.css';
+import '../../styles/prose.css';
+
+const title = 'Blog — Pricing Tips for Home Food Makers | RecipePricer';
+const description =
+  'Pricing guides, cost breakdowns, and business tips for home bakers, cottage food sellers, and small food businesses. Learn to price with confidence.';
+
+const posts = (await getCollection('blog')).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+const categoryLabels: Record<string, string> = {
+  pricing: 'Pricing',
+  guides: 'Guides',
+  business: 'Business',
+};
+---
+
+<BaseLayout title={title} description={description}>
+  <section class="section">
+    <div class="section__inner blog-listing">
+      <p class="section-label">Blog</p>
+      <h1 class="section-heading">Pricing tips for home food makers</h1>
+      <p class="blog-listing__intro">
+        Guides, cost breakdowns, and honest advice on pricing your homemade food products.
+      </p>
+
+      <div class="blog-listing__grid">
+        {posts.map((post) => (
+          <a href={`/blog/${post.id}`} class="blog-card">
+            <span class="blog-card__category">{categoryLabels[post.data.category] || post.data.category}</span>
+            <h2 class="blog-card__title">{post.data.title}</h2>
+            <p class="blog-card__desc">{post.data.description}</p>
+            <time class="blog-card__date" datetime={post.data.pubDate.toISOString()}>
+              {post.data.pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </time>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--reveal final-cta">
+    <div class="section__inner">
+      <h2 class="final-cta__heading">Stop guessing.<br />Start pricing.</h2>
+      <p class="final-cta__sub">Calculate your true recipe cost in 3 minutes. Free, no signup required.</p>
+      <a href="/calculator" class="btn" data-umami-event="blog_listing_cta_click">Calculate your true cost</a>
+    </div>
+  </section>
+
+  <footer class="landing-footer">
+    <p>&copy; 2026 RecipePricer. Know your true cost. Price with confidence.</p>
+  </footer>
+</BaseLayout>
