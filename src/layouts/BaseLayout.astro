@@ -3,12 +3,16 @@ interface Props {
   title?: string;
   description?: string;
   ogImage?: string;
+  ogType?: string;
+  noindex?: boolean;
 }
 
 const {
   title = 'RecipePricer — Pricing Therapist for Home Bakers',
   description = 'Know your true recipe cost. Price with confidence.',
   ogImage = '/hero-baking.jpg',
+  ogType = 'website',
+  noindex = false,
 } = Astro.props;
 
 const canonicalUrl = Astro.url.href;
@@ -22,13 +26,14 @@ const ogImageUrl = new URL(ogImage, Astro.site).href;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex" />}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="canonical" href={canonicalUrl} />
 
     <!-- Open Graph -->
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:image" content={ogImageUrl} />
 

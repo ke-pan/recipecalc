@@ -26,12 +26,18 @@ const formattedDate = pubDate.toLocaleDateString('en-US', {
 
 const pageTitle = `${title} | RecipePricer Blog`;
 
+const postUrl = new URL(`/blog/${post.id}`, Astro.site).href;
+const ogImageUrl = new URL('/hero-baking.jpg', Astro.site).href;
+
 const blogPostingSchema = {
   '@context': 'https://schema.org',
   '@type': 'BlogPosting',
   headline: title,
   description,
+  image: ogImageUrl,
   datePublished: pubDate.toISOString(),
+  dateModified: pubDate.toISOString(),
+  mainEntityOfPage: { '@type': 'WebPage', '@id': postUrl },
   author: {
     '@type': 'Organization',
     name: 'RecipePricer',
@@ -41,6 +47,10 @@ const blogPostingSchema = {
     '@type': 'Organization',
     name: 'RecipePricer',
     url: 'https://recipepricer.com',
+    logo: {
+      '@type': 'ImageObject',
+      url: new URL('/logo.svg', Astro.site).href,
+    },
   },
 };
 
@@ -57,7 +67,7 @@ const categoryLabels: Record<string, string> = {
 };
 ---
 
-<BaseLayout title={pageTitle} description={description}>
+<BaseLayout title={pageTitle} description={description} ogType="article">
   <Fragment slot="head">
     <script type="application/ld+json" set:html={JSON.stringify(blogPostingSchema)} />
   </Fragment>
