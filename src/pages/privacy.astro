@@ -1,0 +1,129 @@
+---
+export const prerender = true;
+import BaseLayout from '../layouts/BaseLayout.astro';
+import '../styles/landing.css';
+import '../styles/prose.css';
+
+const title = 'Privacy Policy — RecipePricer';
+const description = 'How RecipePricer handles your data. Short version: your recipes stay on your device. We don\'t track you.';
+---
+
+<BaseLayout title={title} description={description}>
+  <article class="privacy-page">
+    <header class="privacy-page__header">
+      <p class="section-label">Legal</p>
+      <h1 class="privacy-page__title">Privacy Policy</h1>
+      <p class="privacy-page__updated">Last updated: April 3, 2026</p>
+    </header>
+
+    <div class="prose">
+      <p>
+        RecipePricer is built to respect your privacy. Here's exactly what data we collect, where it goes, and what we don't do.
+      </p>
+
+      <h2>Your recipe data</h2>
+      <p>
+        All recipe data (ingredients, costs, saved recipes) is stored in your browser's local storage. It never leaves your device. We don't have accounts, servers, or cloud sync. We cannot see, access, or recover your recipes.
+      </p>
+      <p>
+        You can export your data as a JSON file anytime and import it on another device. If you clear your browser data, your recipes are gone permanently.
+      </p>
+
+      <h2>Analytics</h2>
+      <p>
+        We use <a href="https://umami.is" target="_blank" rel="noopener">Umami</a>, a privacy-focused, self-hosted analytics tool. Umami does not use cookies, does not collect personal data, and does not track you across sites. We see aggregate page views, referral sources, and anonymous custom events (like button clicks), not individual visitors.
+      </p>
+      <p>
+        No Google Analytics. No Meta Pixel. No fingerprinting.
+      </p>
+
+      <h2>Payments</h2>
+      <p>
+        Payments are processed by <a href="https://www.lemonsqueezy.com" target="_blank" rel="noopener">LemonSqueezy</a> (Merchant of Record). When you purchase a license, LemonSqueezy handles your payment information. We never see or store your credit card number. LemonSqueezy's privacy policy applies to payment processing.
+      </p>
+      <p>
+        We receive your email address and license key from LemonSqueezy to deliver your purchase. We don't use your email for marketing unless you explicitly opt in.
+      </p>
+
+      <h2>Cookies</h2>
+      <p>
+        RecipePricer does not set any tracking cookies. An HttpOnly cookie is used for license activation. It contains a signed session token (no personal information) and expires after 1 year, matching the lifetime of a one-time purchase.
+      </p>
+
+      <h2>Third-party services</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Purpose</th>
+            <th>Data shared</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Umami (self-hosted)</td>
+            <td>Anonymous page views and events</td>
+            <td>None (no cookies, no personal data)</td>
+          </tr>
+          <tr>
+            <td>LemonSqueezy</td>
+            <td>Payment processing</td>
+            <td>Email, payment info (handled by them)</td>
+          </tr>
+          <tr>
+            <td>Cloudflare</td>
+            <td>Hosting and CDN</td>
+            <td>Standard web request logs</td>
+          </tr>
+          <tr>
+            <td>Google Fonts</td>
+            <td>Typography</td>
+            <td>Standard font API requests</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Children's privacy</h2>
+      <p>
+        RecipePricer is not directed at children under 13. We don't knowingly collect information from children.
+      </p>
+
+      <h2>Changes to this policy</h2>
+      <p>
+        If we change this policy, we'll update the date at the top. For significant changes, we'll add a notice on the homepage.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions about privacy: <a href="mailto:hello@recipepricer.com">hello@recipepricer.com</a>
+      </p>
+    </div>
+  </article>
+
+  <footer class="landing-footer">
+    <p>&copy; 2026 RecipePricer. Know your true cost. Price with confidence.</p>
+  </footer>
+</BaseLayout>
+
+<style>
+  .privacy-page {
+    max-width: var(--max-content-width);
+    margin: 0 auto;
+    padding: var(--space-2xl) var(--space-lg) var(--space-xl);
+  }
+
+  .privacy-page__header {
+    margin-bottom: var(--space-xl);
+  }
+
+  .privacy-page__title {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+  }
+
+  .privacy-page__updated {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    margin-top: var(--space-xs);
+  }
+</style>

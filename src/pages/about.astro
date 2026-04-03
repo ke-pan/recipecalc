@@ -1,0 +1,85 @@
+---
+export const prerender = true;
+import BaseLayout from '../layouts/BaseLayout.astro';
+import '../styles/landing.css';
+import '../styles/prose.css';
+
+const title = 'About RecipePricer — Why This Exists';
+const description =
+  'RecipePricer helps home food makers stop undercharging. Built by a solo maker who got tired of watching talented bakers lose money on every batch.';
+---
+
+<BaseLayout title={title} description={description}>
+  <article class="about-page">
+    <header class="about-page__header">
+      <p class="section-label">About</p>
+      <h1 class="about-page__title">Why RecipePricer exists</h1>
+    </header>
+
+    <div class="prose">
+      <p>
+        Most home food makers are losing money and don't know it.
+      </p>
+      <p>
+        They add up flour, butter, and sugar, see a small number, and set a price that feels reasonable. But they forget their time, their packaging, their overhead, and the platform fees. By the time a batch is sold, the real cost is 3-5x what they thought.
+      </p>
+      <p>
+        I built RecipePricer because the tools that exist either do too little (ingredient-only calculators) or too much (restaurant management software with a learning curve). Home bakers, cottage food sellers, and farmers market vendors need something in between: a tool that shows the full picture without the complexity.
+      </p>
+
+      <h2>How it works</h2>
+      <p>
+        You enter your recipe ingredients with purchase prices. Then you add the costs most people forget: your hourly rate, packaging, kitchen overhead, and platform fees. RecipePricer shows your true cost per batch and per unit, the gap between ingredient cost and real cost, and a recommended selling price based on your target margin.
+      </p>
+      <p>
+        Everything runs in your browser. No account, no cloud, no subscription. Your recipes stay on your device. You can export them as a backup anytime.
+      </p>
+
+      <h2>What this isn't</h2>
+      <p>
+        RecipePricer is not restaurant management software. It doesn't do inventory tracking, POS integration, or employee scheduling. It does one thing well: help you understand what your food actually costs to make, so you can price it without guessing.
+      </p>
+
+      <h2>The pricing model</h2>
+      <p>
+        The cost breakdown is free, forever. The paid version ($19 one-time, not a subscription) adds a recommended selling price with adjustable margin, recipe saving, and export. No recurring fees, no upsells, no "premium tiers."
+      </p>
+
+      <h2>Get in touch</h2>
+      <p>
+        Questions, feedback, or feature requests: <a href="mailto:hello@recipepricer.com">hello@recipepricer.com</a>
+      </p>
+    </div>
+
+    <div class="about-page__cta">
+      <a href="/calculator" class="btn">Try the calculator</a>
+    </div>
+  </article>
+
+  <footer class="landing-footer">
+    <p>&copy; 2026 RecipePricer. Know your true cost. Price with confidence.</p>
+  </footer>
+</BaseLayout>
+
+<style>
+  .about-page {
+    max-width: var(--max-content-width);
+    margin: 0 auto;
+    padding: var(--space-2xl) var(--space-lg) var(--space-xl);
+  }
+
+  .about-page__header {
+    margin-bottom: var(--space-xl);
+  }
+
+  .about-page__title {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+  }
+
+  .about-page__cta {
+    margin-top: var(--space-xl);
+    padding-top: var(--space-xl);
+    border-top: 1px solid var(--border-subtle);
+  }
+</style>
