@@ -70,7 +70,7 @@ describe('trackEvent', () => {
   });
 
   it('does not throw when window.umami is not set at all', () => {
-    delete (window as Record<string, unknown>).umami;
+    delete (window as unknown as Record<string, unknown>).umami;
 
     expect(() => trackEvent('test_event', { key: 'val' })).not.toThrow();
   });

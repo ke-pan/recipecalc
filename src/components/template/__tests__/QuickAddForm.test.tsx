@@ -162,12 +162,12 @@ describe('Quick Add Form', () => {
   });
 
   it('opens Quick Add form when button is clicked', async () => {
-    const user = await openQuickAdd();
+    await openQuickAdd();
     expect(screen.getByTestId('quick-add-form')).toBeInTheDocument();
   });
 
   it('disables Quick Add button while form is open', async () => {
-    const user = await openQuickAdd();
+    await openQuickAdd();
     expect(screen.getByTestId('quick-add-btn')).toBeDisabled();
   });
 

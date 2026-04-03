@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { PantryItem } from '../../../types/pantry';
+import type { Ingredient } from '../../../lib/calc/types';
 import TemplatePage from '../TemplatePage';
 
 // ---------------------------------------------------------------------------
@@ -89,7 +91,7 @@ function makeRecipe(overrides: Record<string, unknown> = {}) {
           wastePercent: 0,
           pantryId: null,
         },
-      ],
+      ] as Ingredient[],
       laborAndOverhead: {
         hourlyRate: 15,
         packaging: 5,
@@ -102,10 +104,10 @@ function makeRecipe(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function makePantryItem(overrides: Record<string, unknown> = {}) {
+function makePantryItem(overrides: Partial<PantryItem> = {}): PantryItem {
   return {
-    id: overrides.id ?? 'pantry-1',
-    name: (overrides.name as string) ?? 'All-Purpose Flour',
+    id: 'pantry-1',
+    name: 'All-Purpose Flour',
     ingredientKey: 'all-purpose-flour',
     purchaseUnit: 'lb',
     purchaseAmount: 5,
@@ -435,7 +437,6 @@ describe('TemplatePage', () => {
   // ---- Hydration warnings ----
 
   it('shows warning count when pantry item is deleted', async () => {
-    const user = userEvent.setup();
     store[LICENSE_KEY] = makeLicenseJSON();
 
     // Recipe references a pantry item that doesn't exist

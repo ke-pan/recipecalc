@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { createElement, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
 // Mocks — must be set up BEFORE importing the module under test

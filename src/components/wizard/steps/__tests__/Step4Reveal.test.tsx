@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import Step4Reveal from '../Step4Reveal';
 import { LicenseProvider } from '../../../../contexts/LicenseContext.js';
@@ -132,13 +132,6 @@ function mockClipboard() {
     value: { writeText },
   });
   return writeText;
-}
-
-/** Advance all timers to complete the full reveal animation sequence. */
-function completeRevealAnimation() {
-  act(() => {
-    vi.advanceTimersByTime(2000);
-  });
 }
 
 describe('Step4Reveal', () => {

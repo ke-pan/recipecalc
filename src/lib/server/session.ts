@@ -94,8 +94,8 @@ export async function verifySessionToken(
     const valid = await crypto.subtle.verify(
       'HMAC',
       hmacKey,
-      fromBase64Url(sigB64),
-      new TextEncoder().encode(payloadB64),
+      fromBase64Url(sigB64) as BufferSource,
+      new TextEncoder().encode(payloadB64) as BufferSource,
     );
     if (!valid) return null;
 

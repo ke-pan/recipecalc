@@ -10,7 +10,7 @@ import type { PantryItem } from '../../../../types/pantry';
 
 const mockUseLicense = vi.fn(() => ({
   isUnlocked: false,
-  license: null,
+  license: null as { keyPrefix: string } | null,
   activate: vi.fn(),
   deactivate: vi.fn(),
 }));
@@ -87,8 +87,8 @@ function makePantryItem(overrides?: Partial<PantryItem>): PantryItem {
 
 interface RenderOptions {
   recipe?: Recipe;
-  onIngredientsChange?: (ingredients: Ingredient[]) => void;
-  onValidChange?: (valid: boolean) => void;
+  onIngredientsChange?: ReturnType<typeof vi.fn>;
+  onValidChange?: ReturnType<typeof vi.fn>;
 }
 
 function renderStep2(opts: RenderOptions = {}) {
@@ -652,7 +652,7 @@ describe('Step2Ingredients', () => {
     beforeEach(() => {
       mockUseLicense.mockReturnValue({
         isUnlocked: true,
-        license: { key: 'test', instanceId: 'inst', activatedAt: '2025-01-01', storeId: 's', productId: 'p' },
+        license: { keyPrefix: 'test-key' },
         activate: vi.fn(),
         deactivate: vi.fn(),
       });
@@ -771,7 +771,7 @@ describe('Step2Ingredients', () => {
     beforeEach(() => {
       mockUseLicense.mockReturnValue({
         isUnlocked: true,
-        license: { key: 'test', instanceId: 'inst', activatedAt: '2025-01-01', storeId: 's', productId: 'p' },
+        license: { keyPrefix: 'test-key' },
         activate: vi.fn(),
         deactivate: vi.fn(),
       });

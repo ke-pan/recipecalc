@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import type { Ingredient, Recipe, LaborAndOverhead } from '../../lib/calc/types.js';
 import type { PantryItem, UserDefaults } from '../../types/pantry.js';
 import { formatCurrency } from '../../lib/format.js';
-import { calculateIngredientCost, roundCents } from '../../lib/calc/pricing.js';
+import { roundCents } from '../../lib/calc/pricing.js';
 
 // ---------------------------------------------------------------------------
 // Types

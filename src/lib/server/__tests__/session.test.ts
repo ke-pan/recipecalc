@@ -4,7 +4,6 @@ import {
   verifySessionToken,
   COOKIE_NAME,
   MAX_AGE,
-  type SessionPayload,
 } from '../session';
 
 const SECRET = 'test-secret-key-for-hmac-signing';

@@ -1,4 +1,4 @@
-import { useState, useCallback, type FormEvent } from 'react';
+import React, { useState, useCallback } from 'react';
 import { LicenseProvider, useLicense, type ActivateResult } from '../../contexts/LicenseContext.js';
 import { trackEvent, EVENTS } from '../../lib/analytics';
 import './activate.css';
@@ -59,7 +59,7 @@ function ActivateForm() {
   const [state, setState] = useState<ActivateState>({ phase: 'idle' });
 
   const handleSubmit = useCallback(
-    async (e: FormEvent) => {
+    async (e: React.FormEvent) => {
       e.preventDefault();
       const trimmed = key.trim();
       if (!trimmed) return;

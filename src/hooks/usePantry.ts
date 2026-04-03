@@ -173,7 +173,7 @@ export function usePantry(): UsePantryReturn {
     const recipes = readRecipes();
     return recipes.filter((saved) =>
       saved.recipe.ingredients.some(
-        (ing) => (ing as Record<string, unknown>).pantryId === id,
+        (ing) => (ing as unknown as Record<string, unknown>).pantryId === id,
       ),
     ).length;
   }, []);
