@@ -20,7 +20,6 @@ interface Props {
 const { niche } = Astro.props;
 
 const faqSchema = {
-  '@context': 'https://schema.org',
   '@type': 'FAQPage',
   mainEntity: niche.faqs.map((faq) => ({
     '@type': 'Question',
@@ -33,11 +32,25 @@ const faqSchema = {
 };
 
 const relatedNiches = NICHE_LANDINGS.filter((n) => niche.related.includes(n.slug));
+
+const schemaGraph = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    faqSchema,
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://recipepricer.com/' },
+        { '@type': 'ListItem', position: 2, name: niche.heroHeadline },
+      ],
+    },
+  ],
+};
 ---
 
 <BaseLayout title={niche.title} description={niche.description}>
   <Fragment slot="head">
-    <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(schemaGraph)} />
   </Fragment>
 
   <!-- 1. Hero (text-only, no photo, no carousel) -->

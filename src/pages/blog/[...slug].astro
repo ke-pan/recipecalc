@@ -30,7 +30,6 @@ const postUrl = new URL(`/blog/${post.id}`, Astro.site).href;
 const ogImageUrl = new URL('/hero-baking.jpg', Astro.site).href;
 
 const blogPostingSchema = {
-  '@context': 'https://schema.org',
   '@type': 'BlogPosting',
   headline: title,
   description,
@@ -65,11 +64,27 @@ const categoryLabels: Record<string, string> = {
   guides: 'Guides',
   business: 'Business',
 };
+
+const schemaGraph = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    blogPostingSchema,
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://recipepricer.com/' },
+        { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://recipepricer.com/blog/' },
+        { '@type': 'ListItem', position: 3, name: title },
+      ],
+    },
+  ],
+};
 ---
 
 <BaseLayout title={pageTitle} description={description} ogType="article">
   <Fragment slot="head">
-    <script type="application/ld+json" set:html={JSON.stringify(blogPostingSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(schemaGraph)} />
+    <meta property="article:published_time" content={pubDate.toISOString()} />
   </Fragment>
 
   <article class="blog-post">
